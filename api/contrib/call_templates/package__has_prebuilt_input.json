@@ -1,0 +1,9 @@
+ {
+   "buildTarget": {
+     "name": "%(build_target)s"
+   },
+   "packageInfo": {
+     "category": "chromeos-base",
+     "packageName": "chrome-icu"
+   }
+ }

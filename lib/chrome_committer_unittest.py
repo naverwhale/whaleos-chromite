@@ -1,0 +1,111 @@
+# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+"""Unit tests for the chrome_committer library."""
+
+import os
+
+from chromite.lib import cros_test_lib
+from chromite.lib import osutils
+from chromite.lib import chrome_committer
+
+
+class ChromeCommitterTester(cros_test_lib.RunCommandTestCase,
+                            cros_test_lib.MockTempDirTestCase):
+  """Test cros_chromeos_lkgm.Committer."""
+
+  def setUp(self):
+    """Common set up method for all tests."""
+    osutils.SafeMakedirs(os.path.join(self.tempdir, '.git', 'info'))
+    osutils.WriteFile(os.path.join(self.tempdir, 'OWNERS'), 'foo@chromium.org')
+    osutils.SafeMakedirs(os.path.join(self.tempdir, 'chromeos'))
+    osutils.WriteFile(os.path.join(self.tempdir, 'chromeos', 'BUILD.gn'),
+                      'assert(is_chromeos)')
+    self.committer = chrome_committer.ChromeCommitter(
+        'user@test.org', self.tempdir)
+
+  def _assertCommand(self, git_cmd):
+    self.assertCommandContains(git_cmd.split(' '))
+
+  def testCheckout(self):
+    """Tests checkout with mocked out git."""
+    self.committer.Checkout(['OWNERS'])
+
+    self._assertCommand('git init')
+    self._assertCommand('git remote add origin '
+                        'https://chromium.googlesource.com/chromium/src.git')
+    self._assertCommand('git config core.sparsecheckout true')
+    self._assertCommand('git fetch --depth=1')
+    self._assertCommand('git pull origin master')
+    self._assertCommand('git checkout -B auto-commit-branch origin/master')
+    self.assertEqual(
+        osutils.ReadFile(os.path.join(self.tempdir, '.git', 'info',
+                                      'sparse-checkout')),
+        'OWNERS\ncodereview.settings\nWATCHLISTS')
+
+  def testCommit(self):
+    """Tests that we can commit a file."""
+    self.committer.Checkout(['OWNERS'])
+    self.committer.Commit(['OWNERS', 'chromeos/BUILD.gn'],
+                          'Modify OWNERS and BUILD.gn')
+
+    self._assertCommand('git add -- OWNERS')
+    self._assertCommand('git add -- BUILD.gn')
+    self.assertCommandContains(['git',
+                                '-c', 'user.email=user@test.org',
+                                '-c', 'user.name=user@test.org',
+                                'commit', '-m',
+                                'Automated Commit: Modify OWNERS and BUILD.gn'])
+
+    # Non-existent file should raise.
+    self.assertRaisesRegex(chrome_committer.CommitError,
+                           'Invalid path: /tmp/chromite.*/nonexistent$',
+                           self.committer.Commit,
+                           ['nonexistent'], 'Commit non-existent file')
+
+  def testUpload(self):
+    """Tests that we can upload a commit."""
+    self.committer.Checkout(['OWNERS'])
+    self.committer.Commit(['OWNERS', 'chromeos/BUILD.gn'],
+                          'Modify OWNERS and BUILD.gn')
+
+    self.committer.Upload()
+
+    self.assertCommandContains(['git',
+                                '-c', 'user.email=user@test.org',
+                                '-c', 'user.name=user@test.org',
+                                'cl', 'upload', '-v', '-m',
+                                'Automated Commit: Modify OWNERS and BUILD.gn',
+                                '--bypass-hooks', '-f',
+                                '--reviewers',
+                                'chrome-os-gardeners-reviews@google.com',
+                                '--set-bot-commit',
+                                '--send-mail'])
+
+  def testUploadCQ(self):
+    """Tests that we can upload a commit and submit it to the CQ."""
+    self.committer.Checkout(['OWNERS'])
+    self.committer.Commit(['OWNERS', 'chromeos/BUILD.gn'],
+                          'Modify OWNERS and BUILD.gn')
+
+    self.committer._cq = True  # pylint: disable=protected-access
+    self.committer.Upload()
+
+    self.assertCommandContains(['--use-commit-queue'])
+
+  def testUploadDryRun(self):
+    """Tests that we can upload a commit with dryrun."""
+    self.committer.Checkout(['OWNERS'])
+    self.committer.Commit(['OWNERS', 'chromeos/BUILD.gn'],
+                          'Modify OWNERS and BUILD.gn')
+
+    self.committer._dryrun = True  # pylint: disable=protected-access
+    self.committer.Upload()
+
+    self.assertCommandContains(['git',
+                                '-c', 'user.email=user@test.org',
+                                '-c', 'user.name=user@test.org',
+                                'cl', 'upload', '-v', '-m',
+                                'Automated Commit: Modify OWNERS and BUILD.gn',
+                                '--bypass-hooks', '-f', '--dry-run'])

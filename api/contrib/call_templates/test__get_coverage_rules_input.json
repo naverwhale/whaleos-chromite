@@ -1,0 +1,18 @@
+{
+    "source_test_plans": [
+        {
+            "requirements": {
+                "kernel_versions": {}
+            }
+        }
+    ],
+    "build_metadata_list": {
+        "path": "../../../../src/config-internal/build/generated/build_metadata.jsonproto"
+    },
+    "dut_attribute_list": {
+        "path": "../../../../src/config-internal/dut_attributes/generated/dut_attributes.jsonproto"
+    },
+    "flat_config_list": {
+        "path": "../../../../src/config-internal/hw_design/generated/flattened.jsonproto"
+    }
+}

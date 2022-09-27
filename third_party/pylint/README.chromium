@@ -1,0 +1,10 @@
+Name: pylint
+URL: https://github.com/PyCQA/pylint
+Version: 0
+Revision: 4339cdee779b705b00c5a266aec5b7b1908c8309
+License: GPL-2
+License File: COPYING
+Security Critical: no
+
+Description:
+Fork of a few format checks that pylint removed but we still use.

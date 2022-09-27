@@ -1,0 +1,63 @@
+#!/usr/bin/env vpython3
+# Copyright 2021 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# [VPYTHON:BEGIN]
+# python_version: "3.8"
+#
+# wheel: <
+#   name: "infra/python/wheels/vulture-py3"
+#   version: "version:2.3"
+# >
+# wheel: <
+#   name: "infra/python/wheels/toml-py3"
+#   version: "version:0.10.1"
+# >
+# [VPYTHON:END]
+
+"""Run vulture over the codebase to find dead code.
+
+Note: This needs to be fed all modules to determine whether anything is used.
+"""
+
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+import vulture.core
+
+
+TOPDIR = Path(__file__).resolve().parent.parent
+
+
+def main(argv):
+  """Main function."""
+  if not argv:
+    os.chdir(TOPDIR)
+
+    # Scan all python modules (except generated bindings) that we authored.
+    result = subprocess.run(['git', 'ls-tree', '-r', '-z', 'HEAD'], check=True,
+                            encoding='utf-8', stdout=subprocess.PIPE)
+    for entry in result.stdout.split('\0'):
+      if not entry:
+        continue
+      fields, path = entry.split('\t', 1)
+      mode, _ = fields.split(' ', 1)
+      if (mode != '120000' and
+          not path.startswith('third_party/') and
+          path.endswith('.py') and
+          not path.endswith('_pb2.py')):
+        argv.append(path)
+
+  argv = (['--ignore-names', 'test*,setUp,setUpClass,tearDown,tearDownClass'] +
+          argv)
+
+  # The vulture API doesn't accept explicit args.
+  sys.argv = [sys.argv[0]] + argv
+  vulture.core.main()
+
+
+if __name__ == '__main__':
+  sys.exit(main(sys.argv[1:]))
