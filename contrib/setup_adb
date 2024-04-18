@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -11,27 +11,32 @@ to local ADB server.
 """
 
 import os
+from pathlib import Path
 import subprocess
 import sys
 
-TRADEFED_PATH = '../../src/third_party/autotest/files/server/cros/tradefed/'
+THIS_FILE = Path(__file__).resolve()
+SOURCE_ROOT = THIS_FILE.parents[2]
+TRADEFED_PATH = SOURCE_ROOT / "src/third_party/autotest/files/server/cros/tradefed"
 
 def main(argv):
-  # We import tradefed_constants.py and use private ADB key in it.
-  sys.path.append(os.path.join(os.path.dirname(__file__), TRADEFED_PATH))
-  import tradefed_constants
+    # We import tradefed_constants.py and use private ADB key in it.
+    sys.path.append(str(TRADEFED_PATH))
+    import tradefed_constants  # pylint: disable=import-error
 
-  print('INFO: Installing private ADB key to ~/.android/arc_adbkey')
-  adbkey_path = os.path.expanduser('~/.android/arc_adbkey')
-  with open(adbkey_path, 'w', encoding='utf-8') as f:
-    f.write(tradefed_constants.PRIVATE_KEY)
+    print("INFO: Installing private ADB key to ~/.android/arc_adbkey")
+    android_path = Path("~/.android").expanduser()
+    android_path.mkdir(exist_ok=True)
+    adbkey_path = android_path / "arc_adbkey"
+    adbkey_path.write_text(tradefed_constants.PRIVATE_KEY, encoding="utf-8")
 
-  print('INFO: Restarting ADB server with the new key path.')
-  os.environ['ADB_VENDOR_KEYS'] = adbkey_path
-  subprocess.call(['adb', 'kill-server'])
-  subprocess.call(['adb', 'start-server'])
+    print("INFO: Restarting ADB server with the new key path.")
+    os.environ["ADB_VENDOR_KEYS"] = str(adbkey_path)
+    subprocess.call(["adb", "kill-server"])
+    subprocess.call(["adb", "start-server"])
 
-  print('INFO: ADB set up complete. You are ready to run adb connect.')
+    print("INFO: ADB set up complete. You are ready to run adb connect.")
 
-if __name__ == '__main__':
-  sys.exit(main(sys.argv[1:]))
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

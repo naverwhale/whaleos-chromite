@@ -1,4 +1,4 @@
-# Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
+# Copyright 2011 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -14,12 +14,8 @@
 # Profiled execution.
 #profile=no
 
-# Add <file or directory> to the black list. It should be a base name, not a
-# path. You may set this option multiple times.
-#ignore=CVS
-
-# Add files or directories matching the regex patterns to the blacklist. The
-# regex matches against base names, not paths.
+# Do not lint files or directories matching the regex patterns.
+# It matches against base names, not paths.
 ignore-patterns=
     .*_pb2\.py$,
     .*third_party\/.*.py$
@@ -36,11 +32,6 @@ load-plugins=
     pylint.extensions.docstyle,
     pylint.extensions.redefined_variable_type,
     pylint.extensions.overlapping_exceptions,
-
-# Configure quote preferences.
-string-quote = single-avoid-escape
-triple-quote = double
-docstring-quote = double
 
 
 [MESSAGES CONTROL]
@@ -130,22 +121,15 @@ enable=
 # TODO: Re-enable redefined-variable-type.
 # TODO: Re-enable inconsistent-return-statements.
 # TODO: Re-enable keyword-arg-before-vararg once we're on Python 3-only.
-# TODO: Re-enable useless-object-inheritance once we're on Python 3-only and
-#       we update the style guide.
 # TODO: Re-enable import-outside-toplevel.
-# TODO: Re-enable unnecessary-comprehension.
-# TODO: Re-enable consider-using-dict-comprehension.
-# TODO: Re-enable consider-using-set-comprehension.
-# TODO: Re-enable consider-using-in.
 # TODO: Re-enable try-except-raise.
-# TODO: Re-enable chained-comparison.
+# TODO(b/236161656): Re-enable consider-using-f-string.
+# ungrouped-imports: We let isort handle this.
+# wrong-import-order: We let isort handle this.
 disable=
     broad-except,
-    chained-comparison,
+    consider-using-f-string,
     consider-iterating-dictionary,
-    consider-using-dict-comprehension,
-    consider-using-in,
-    consider-using-set-comprehension,
     fixme,
     file-ignored,
     keyword-arg-before-vararg,
@@ -154,7 +138,7 @@ disable=
     invalid-name,
     locally-disabled,
     locally-enabled,
-    missing-docstring,
+    missing-function-docstring,
     no-member,
     no-else-break,
     no-else-continue,
@@ -177,9 +161,8 @@ disable=
     too-many-return-statements,
     too-many-statements,
     try-except-raise,
-    unnecessary-comprehension,
-    useless-object-inheritance,
-
+    ungrouped-imports,
+    wrong-import-order,
 
 [REPORTS]
 
@@ -232,7 +215,7 @@ ignore-long-lines=(^(import|from))|(^\s*(# )?<?https?://\S+>?$)
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).
 # CHANGE: Use "  " instead.
-indent-string='  '
+indent-string="    "
 
 
 [TYPECHECK]
@@ -260,7 +243,10 @@ generated-members=REQUEST,acl_users,aq_parent,AndRaise,AndReturn,InAnyOrder,Mult
 # import them.
 #
 # pytest: Made available by our testing virtualenv and can be assumed exists.
-ignored-modules=pytest
+ignored-modules=
+    psutil,
+    pytest,
+    opentelemetry,
 
 [BASIC]
 
@@ -486,7 +472,9 @@ known-third-party=
     magic,
     mock,
     oauth2client,
+    opentelemetry,
     portage,
+    psutil,
     pylint,
     pytest,
     requests,
@@ -500,4 +488,3 @@ known-third-party=
 # Apply logging string format checks to calls on these modules.
 logging-modules=
     logging,
-    chromite.lib.cros_logging,

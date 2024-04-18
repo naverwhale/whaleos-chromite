@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "lib": [
+      "ES2020",
+      // Satisfy typechecker for esbuild.
+      // https://github.com/evanw/esbuild/issues/2388
+      "DOM"
+    ],
+    "module": "commonjs",
+    "rootDirs": [".", "../src"],
+    "sourceMap": true,
+    "strict": true,
+    "target": "ES2020"
+  },
+  "include": ["."]
+}

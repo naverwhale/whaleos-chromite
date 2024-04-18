@@ -1,0 +1,23 @@
+MODULE Linux arm 3CBBBE087DD3833300000000000000000 xtrn.so
+INFO CODE_ID 08BEBB3CD37D3383
+FILE 0 /build/kevin/tmp/portage/media-gfx/imagemagick-7.0.8.42/work/ImageMagick-7.0.8-42/coders/xtrn.c
+FUNC 4c8 34 0 RegisterXTRNImage
+4c8 2 200 0
+4ca 10 204 0
+4da 2 210 0
+4dc a 211 0
+4e6 4 212 0
+4ea 6 213 0
+4f0 c 0 0
+FUNC 4fc c 0 UnregisterXTRNImage
+4fc 8 237 0
+504 4 0 0
+PUBLIC 420 0 call_weak_fn
+PUBLIC 445 0 __do_init
+PUBLIC 47d 0 __do_fini
+PUBLIC 509 0 __ThumbV7PILongThunk_UnregisterMagickInfo
+PUBLIC 514 0 _init
+PUBLIC 520 0 _fini
+STACK CFI INIT 4c8 34 .cfa: sp 0 + .ra: lr
+STACK CFI 4ca .cfa: sp 8 + .ra: .cfa -4 + ^ r7: .cfa -8 + ^
+STACK CFI INIT 4fc c .cfa: sp 0 + .ra: lr

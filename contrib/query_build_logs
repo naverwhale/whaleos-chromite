@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -25,7 +25,7 @@ before_datestring=""
 after_datestring=""
 
 print_usage() {
-  cat  <<HELP_USAGE
+  cat <<HELP_USAGE
 
 Usage:  $0 -c|--count <search_string>
            OR -s|--string <search_string>|-ns <search_string>
@@ -78,25 +78,25 @@ HELP_USAGE
   exit 0
 }
 
-while (( "$#" )); do
+while (("$#")); do
   case "$1" in
-    -s|--string)
-      string_data_array=( "${string_data_array[@]}" "$2" )
+    -s | --string)
+      string_data_array=("${string_data_array[@]}" "$2")
       shift 2
       ;;
-    -ns|--not_string)
-      not_string_data_array=( "${not_string_data_array[@]}" "$2" )
+    -ns | --not_string)
+      not_string_data_array=("${not_string_data_array[@]}" "$2")
       shift 2
       ;;
-    -c|--count)
+    -c | --count)
       count_data=$2
       shift 2
       ;;
-    -w|--when)
+    -w | --when)
       when=$2
       shift 2
       ;;
-    -l|--limit)
+    -l | --limit)
       limit=$2
       shift 2
       ;;
@@ -137,11 +137,11 @@ while (( "$#" )); do
       case_insensitive=0
       shift 1
       ;;
-    -v|--verbose)
+    -v | --verbose)
       verbose=1
       shift
       ;;
-    --usage|-u|--help|-h)
+    --usage | -u | --help | -h)
       print_usage
       shift
       ;;
@@ -149,6 +149,7 @@ while (( "$#" )); do
       echo "Unknown arg: $1"
       print_usage
       shift
+      ;;
   esac
 done
 
@@ -212,7 +213,6 @@ if [[ -n ${join_1} ]]; then
   SUBSTR(${source_2}, STRPOS(${source_2}, \"${join_2}\"), ${field_limit})
   AS stdout_2, DATETIME(TIMESTAMP_SECONDS(request_time.seconds)) AS DateTime"
 
-
   query+=" FROM chromeos_ci_eng.analysis_event_log.${when}"
   query+=" INNER JOIN (select build_id AS build_id1,"
   query+=" step_name AS step_name1, stdout AS stdout_2"
@@ -256,10 +256,8 @@ if [[ $string_data_arraylen -eq 0 && $not_string_data_arraylen -eq 0 ]]; then
   print_usage
 fi
 
-
 select_fields=""
-for (( index=0; index < $string_data_arraylen; index++ ))
-do
+for ((index = 0; index < $string_data_arraylen; index++)); do
   string_data=${string_data_array[$index]}
 
   # Field_limit is always set (even w/o cmd line arg), so set select_field
@@ -281,8 +279,7 @@ fi
 
 query+=" FROM chromeos_ci_eng.analysis_event_log.${when}"
 
-for (( index=0; index < $string_data_arraylen; index++ ))
-do
+for ((index = 0; index < $string_data_arraylen; index++)); do
   string_data=${string_data_array[$index]}
   if [[ $index -eq 0 ]]; then
     query+=" WHERE ${source_data}"
@@ -296,8 +293,7 @@ do
   fi
 done
 
-for (( index=0; index < $not_string_data_arraylen; index++ ))
-do
+for ((index = 0; index < $not_string_data_arraylen; index++)); do
   not_string_data=${not_string_data_array[$index]}
   if [[ $index -eq 0 && $string_data_arraylen -eq 0 ]]; then
     query+=" WHERE ${source_data}"

@@ -1,0 +1,51 @@
+MODULE Linux x86_64 D9C3CB89A3AA6B1900000000000000000 btoa
+INFO CODE_ID 89CBC3D9AAA3196B
+FILE 0 /build/eve/tmp/portage/app/nss/work/nss/nss-abi_x86_64.amd64/cmd/btoa/btoa.c
+FILE 1 /build/eve/usr/include/bits/stdio2.h
+FUNC fb0 40c 0 main
+fb0 27 106 0
+1070 a 0 0
+107a e 125 0
+10bf 3 133 0
+10d2 4 135 0
+1231 a 57 0
+139e 1e 0 0
+FUNC 13bc 87 0 Usage
+13bc 9 90 0
+140d 3 98 0
+1410 15 98 0
+1425 3 100 0
+1428 1b 100 0
+FUNC 1443 a9 0 fprintf(_IO_FILE*, char const* pass_object_size1, ...)
+1443 5d 125 1
+14a0 25 126 1
+14c5 a 127 1
+14cf f 0 1
+14e7 5 0 1
+FUNC 14ec 3d 0 output_ascii
+14ec f 25 0
+14fb 3 29 0
+151d 5 0 0
+1522 7 36 0
+PUBLIC f10 0 _start
+PUBLIC 152c 0 _init
+PUBLIC 1544 0 _fini
+STACK CFI INIT f10 22 .cfa: $rsp 8 + .ra: .cfa -8 + ^
+STACK CFI INIT f40 2e .cfa: $rsp 8 + .ra: .cfa -8 + ^
+STACK CFI INIT f70 40 .cfa: $rsp 8 + .ra: .cfa -8 + ^
+STACK CFI f71 .cfa: $rsp 16 +
+STACK CFI INIT fb0 40c .cfa: $rsp 8 + .ra: .cfa -8 + ^
+STACK CFI fb1 $rbp: .cfa -16 + ^ .cfa: $rsp 16 +
+STACK CFI fb4 .cfa: $rbp 16 +
+STACK CFI fc4 $r12: .cfa -48 + ^ $r13: .cfa -40 + ^ $r14: .cfa -32 + ^ $r15: .cfa -24 + ^ $rbx: .cfa -56 + ^
+STACK CFI 1328 .cfa: $rsp 8 +
+STACK CFI 14f0 .cfa: $rbp 16 +
+STACK CFI 14f3 $r14: .cfa -24 + ^ $rbx: .cfa -32 + ^
+STACK CFI 1528 .cfa: $rsp 8 +
+STACK CFI INIT f10 22 .cfa: $rsp 8 + .ra: .cfa -8 + ^
+STACK CFI INIT f40 2e .cfa: $rsp 8 + .ra: .cfa -8 + ^
+STACK CFI INIT f70 40 .cfa: $rsp 8 + .ra: .cfa -8 + ^
+STACK CFI f71 .cfa: $rsp 16 +
+STACK CFI fa9 .cfa: $rsp 8 +
+STACK CFI fae .cfa: $rsp 16 +
+STACK CFI faf .cfa: $rsp 8 +

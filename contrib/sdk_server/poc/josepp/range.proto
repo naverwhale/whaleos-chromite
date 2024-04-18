@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+// Example proto file for a server-streaming endpoint
+
+message RangeRequest {
+  uint32 start = 1;
+  uint32 stop = 2;
+}
+
+message RangeResponse { uint32 value = 1; }
+
+service RangeService {
+  rpc GetRange(RangeRequest) returns (stream RangeResponse);
+}

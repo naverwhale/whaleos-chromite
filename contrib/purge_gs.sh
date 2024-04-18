@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2016 The Chromium OS Authors. All rights reserved.
+# Copyright 2016 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -12,16 +12,16 @@
 
 LOG=~/purge.log
 ATTR_URL="http://metadata.google.internal/computeMetadata/v1/instance/attributes/purge_target"
-CHROMITE_BIN="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+CHROMITE_BIN="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 cd "${CHROMITE_BIN}"
 
-TARGET=`curl -H "Metadata-Flavor: Google" ${ATTR_URL}`
+TARGET=$(curl -H "Metadata-Flavor: Google" ${ATTR_URL})
 mv -f "${LOG}" "${LOG}.previous"
-(date && \
- git pull && \
- ./purge_builds --debug "--${TARGET}" && \
- date) >> "${LOG}" 2>&1
+(date \
+  && git pull \
+  && ./purge_builds --debug "--${TARGET}" \
+  && date) >>"${LOG}" 2>&1
 
 # Wait a while.
 echo "Sleeping for 24 hours."

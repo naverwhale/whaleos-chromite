@@ -1,4 +1,4 @@
-# Copyright 2015 The Chromium OS Authors. All rights reserved.
+# Copyright 2015 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -21,66 +21,66 @@ import importlib
 
 
 def GetBuilderClass(name):
-  """Locate the builder class with |name|.
+    """Locate the builder class with |name|.
 
-  Examples:
-    If you want to create a new SimpleBuilder, you'd do:
-    cls = builders.GetBuilderClass('simple_builders.SimpleBuilder')
-    builder = cls(...)
+    Examples:
+        If you want to create a new SimpleBuilder, you'd do:
+        cls = builders.GetBuilderClass('simple_builders.SimpleBuilder')
+        builder = cls(...)
 
-    If you want a site specific builder class, do:
-    cls = builders.GetBuilderClass('config.my_builders.MyBuilder')
-    builder = cls(...)
+        If you want a site specific builder class, do:
+        cls = builders.GetBuilderClass('config.my_builders.MyBuilder')
+        builder = cls(...)
 
-  Args:
-    name: The base name of the builder class.
+    Args:
+        name: The base name of the builder class.
 
-  Returns:
-    The class used to instantiate this type of builder.
+    Returns:
+        The class used to instantiate this type of builder.
 
-  Raises:
-    AttributeError when |name| could not be found.
-  """
-  if '.' not in name:
-    raise ValueError('name should be "<module>.<builder>" not "%s"' % name)
+    Raises:
+        AttributeError when |name| could not be found.
+    """
+    if "." not in name:
+        raise ValueError('name should be "<module>.<builder>" not "%s"' % name)
 
-  name_parts = name.split('.')
+    name_parts = name.split(".")
 
-  # Last part is the class name.
-  builder_class_name = name_parts.pop()
+    # Last part is the class name.
+    builder_class_name = name_parts.pop()
 
-  if name_parts[0] == 'config':
-    # config means pull from the site specific config.
-    # config.my_builders -> chromite.config.my_builders
-    name_parts = ['chromite'] + name_parts
-  else:
-    # Otherwise pull from chromite.
-    # simple_builders -> chromite.cbuidlbot.builders.simple_builders
-    name_parts = ['chromite', 'cbuildbot', 'builders'] + name_parts
+    if name_parts[0] == "config":
+        # config means pull from the site specific config.
+        # config.my_builders -> chromite.config.my_builders
+        name_parts = ["chromite"] + name_parts
+    else:
+        # Otherwise pull from chromite.
+        # simple_builders -> chromite.cbuidlbot.builders.simple_builders
+        name_parts = ["chromite", "cbuildbot", "builders"] + name_parts
 
-  target = '.'.join(name_parts)
-  module = importlib.import_module(target)
+    target = ".".join(name_parts)
+    module = importlib.import_module(target)
 
-  # See if this module has the builder we care about.
-  if hasattr(module, builder_class_name):
-    return getattr(module, builder_class_name)
+    # See if this module has the builder we care about.
+    if hasattr(module, builder_class_name):
+        return getattr(module, builder_class_name)
 
-  raise AttributeError('could not locate %s builder' % builder_class_name)
+    raise AttributeError("could not locate %s builder" % builder_class_name)
 
 
 def Builder(builder_run, buildstore):
-  """Given a |builder_run| runtime, return an instantiated builder
+    """Given a |builder_run| runtime, return an instantiated builder
 
-  This is a helper wrapper that resolves the builder_class_name field in the
-  builder settings (which was declared in the build config) to the actual class
-  found in the builder modules.
+    This is a helper wrapper that resolves the builder_class_name field in the
+    builder settings (which was declared in the build config) to the actual
+    class found in the builder modules.
 
-  Args:
-    builder_run: A cbuildbot_run.BuilderRun object.
-    buildstore: BuildStore instance to make DB calls with.
+    Args:
+        builder_run: A cbuildbot_run.BuilderRun object.
+        buildstore: BuildStore instance to make DB calls with.
 
-  Returns:
-    An object of type generic_builders.Builder.
-  """
-  cls = GetBuilderClass(builder_run.config.builder_class_name)
-  return cls(builder_run, buildstore)
+    Returns:
+        An object of type generic_builders.Builder.
+    """
+    cls = GetBuilderClass(builder_run.config.builder_class_name)
+    return cls(builder_run, buildstore)

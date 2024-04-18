@@ -1,5 +1,5 @@
 #!/usr/bin/env vpython3
-# Copyright 2021 The Chromium OS Authors. All rights reserved.
+# Copyright 2021 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -44,8 +44,8 @@ import wrapper3
 
 
 def main():
-  wrapper3.DoMain()
+    wrapper3.DoMain()
 
 
-if __name__ == '__main__':
-  main()
+if __name__ == "__main__":
+    main()

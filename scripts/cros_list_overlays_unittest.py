@@ -1,4 +1,4 @@
-# Copyright 2014 The Chromium OS Authors. All rights reserved.
+# Copyright 2014 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -10,19 +10,19 @@ from chromite.scripts import cros_list_overlays
 
 
 class ListOverlaysTest(cros_test_lib.MockTestCase):
-  """Tests for main()"""
+    """Tests for main()"""
 
-  def setUp(self):
-    self.find_mock = self.PatchObject(portage_util, 'FindOverlays')
+    def setUp(self):
+        self.find_mock = self.PatchObject(portage_util, "FindOverlays")
 
-  def testSmoke(self):
-    """Basic sanity check"""
-    cros_list_overlays.main([])
+    def testSmoke(self):
+        """Basic confidence check"""
+        cros_list_overlays.main([])
 
-  def testAll(self):
-    """Verify --all returns a lot."""
-    cros_list_overlays.main(['--all'])
+    def testAll(self):
+        """Verify --all returns a lot."""
+        cros_list_overlays.main(["--all"])
 
-  def testBoard(self):
-    """Check --board handling."""
-    cros_list_overlays.main(['--board', 'eve'])
+    def testBoard(self):
+        """Check --board handling."""
+        cros_list_overlays.main(["--board", "eve"])

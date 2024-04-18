@@ -1,4 +1,4 @@
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -8,7 +8,6 @@ import csv
 import io
 import os
 import shutil
-import sys
 import textwrap
 
 from chromite.lib import cros_test_lib
@@ -21,8 +20,9 @@ from chromite.signing.lib import signer_unittest
 
 
 def MockDumpFmap(rc, ec_ro=True):
-  """Add futility dump_fmap mock for bios.bin and ec.bin."""
-  bios_output = textwrap.dedent("""
+    """Add futility dump_fmap mock for bios.bin and ec.bin."""
+    bios_output = textwrap.dedent(
+        """
     SI_ALL 0 2097152
     SI_DESC 0 4096
     SI_ME 4096 2093056
@@ -55,9 +55,11 @@ def MockDumpFmap(rc, ec_ro=True):
     RO_FRID_PAD 12650560 1984
     GBB 12652544 978944
     COREBOOT 13631488
-    """)
+    """
+    )
 
-  ec_output = textwrap.dedent("""
+    ec_output = textwrap.dedent(
+        """
     EC_RO 64 131072
     FR_MAIN 64 131072
     RO_FRID 388 32
@@ -67,488 +69,541 @@ def MockDumpFmap(rc, ec_ro=True):
     RW_FWID 262468 32
     SIG_RW 392192 1024
     EC_RW_B 393216 131072
-    """)
-  if ec_ro:
-    ec_output += 'KEY_RO 130112 1024'
+    """
+    )
+    if ec_ro:
+        ec_output += "KEY_RO 130112 1024"
 
-  rc.AddCmdResult(partial_mock.ListRegex('futility dump_fmap -p .*bios.bin'),
-                  output=bios_output)
+    rc.AddCmdResult(
+        partial_mock.ListRegex("futility dump_fmap -p .*bios.bin"),
+        stdout=bios_output,
+    )
 
-  rc.AddCmdResult(partial_mock.ListRegex('futility dump_fmap -p .*ec.bin'),
-                  output=ec_output)
+    rc.AddCmdResult(
+        partial_mock.ListRegex("futility dump_fmap -p .*ec.bin"),
+        stdout=ec_output,
+    )
+
 
 def MockBiosSigner(rc):
-  """Add Bios Signing Mocks to |rc|."""
+    """Add Bios Signing Mocks to |rc|."""
 
-  def _copy_firmware(cmd, *_args, **_kwargs):
-    """Copy file_in to file_out, if file_in exists."""
-    file_in = cmd[-2]
-    file_out = cmd[-1]
-    if os.path.exists(file_in):
-      shutil.copy(file_in, file_out)
+    def _copy_firmware(cmd, *_args, **_kwargs):
+        """Copy file_in to file_out, if file_in exists."""
+        file_in = cmd[-2]
+        file_out = cmd[-1]
+        if os.path.exists(file_in):
+            shutil.copy(file_in, file_out)
 
-  rc.AddCmdResult(partial_mock.ListRegex('futility sign --type bios .*'),
-                  side_effect=_copy_firmware)
+    rc.AddCmdResult(
+        partial_mock.ListRegex("futility sign --type bios .*"),
+        side_effect=_copy_firmware,
+    )
+
 
 def MockECSigner(rc, ec_ro=True):
-  """Add EC Signing Mocks to |rc|.
+    """Add EC Signing Mocks to |rc|.
 
-  Args:
-    rc: RunCommandMock that cmds are added to
-    ec_ro: Treat EC as RO in fmap
-  """
-  rc.AddCmdResult(partial_mock.ListRegex('futility sign --type rwsig .*'))
-  rc.AddCmdResult(partial_mock.ListRegex('openssl dgst -sha256 -binary .*'))
-  rc.AddCmdResult(partial_mock.ListRegex('store_file_in_cbfs .*'))
+    Args:
+        rc: RunCommandMock that cmds are added to
+        ec_ro: Treat EC as RO in fmap
+    """
+    rc.AddCmdResult(partial_mock.ListRegex("futility sign --type rwsig .*"))
+    rc.AddCmdResult(partial_mock.ListRegex("openssl dgst -sha256 -binary .*"))
+    rc.AddCmdResult(partial_mock.ListRegex("store_file_in_cbfs .*"))
 
-  MockDumpFmap(rc, ec_ro=ec_ro)
+    MockDumpFmap(rc, ec_ro=ec_ro)
+
 
 def MockGBBSigner(rc):
-  """Add GBB Signer Mock commands to |rc|"""
-  rc.AddCmdResult(partial_mock.ListRegex('futility gbb'))
+    """Add GBB Signer Mock commands to |rc|"""
+    rc.AddCmdResult(partial_mock.ListRegex("futility gbb"))
+
 
 def MockFirmwareSigner(rc):
-  """Add mocks to |rc| for Firmware signing."""
-  keys_unittest.MockVbutilKey(rc)
-  MockBiosSigner(rc)
-  MockECSigner(rc, ec_ro=False)
-  MockGBBSigner(rc)
+    """Add mocks to |rc| for Firmware signing."""
+    keys_unittest.MockVbutilKey(rc)
+    MockBiosSigner(rc)
+    MockECSigner(rc, ec_ro=False)
+    MockGBBSigner(rc)
 
 
 class TestBiosSigner(cros_test_lib.RunCommandTempDirTestCase):
-  """Test BiosSigner."""
+    """Test BiosSigner."""
 
-  def setUp(self):
-    MockBiosSigner(self.rc)
+    def setUp(self):
+        MockBiosSigner(self.rc)
 
-  def testGetCmdArgs(self):
-    bs = firmware.BiosSigner()
-    ks = signer_unittest.KeysetFromSigner(bs, self.tempdir)
+    def testGetCmdArgs(self):
+        bs = firmware.BiosSigner()
+        ks = signer_unittest.KeysetFromSigner(bs, self.tempdir)
 
-    bios_bin = os.path.join(self.tempdir, 'bios.bin')
-    bios_out = os.path.join(self.tempdir, 'bios.out')
+        bios_bin = os.path.join(self.tempdir, "bios.bin")
+        bios_out = os.path.join(self.tempdir, "bios.out")
 
-    fw_key = ks.keys['firmware_data_key']
-    kernel_key = ks.keys['kernel_subkey']
-    self.assertListEqual(bs.GetFutilityArgs(ks, bios_bin, bios_out),
-                         ['sign',
-                          '--type', 'bios',
-                          '--signprivate', fw_key.private,
-                          '--keyblock', fw_key.keyblock,
-                          '--kernelkey', kernel_key.public,
-                          '--version', str(fw_key.version),
-                          '--devsign', fw_key.private,
-                          '--devkeyblock', fw_key.keyblock,
-                          bios_bin, bios_out])
+        fw_key = ks.keys["firmware_data_key"]
+        kernel_key = ks.keys["kernel_subkey"]
+        self.assertListEqual(
+            bs.GetFutilityArgs(ks, bios_bin, bios_out),
+            [
+                "sign",
+                "--type",
+                "bios",
+                "--signprivate",
+                fw_key.private,
+                "--keyblock",
+                fw_key.keyblock,
+                "--kernelkey",
+                kernel_key.public,
+                "--version",
+                str(fw_key.version),
+                bios_bin,
+                bios_out,
+            ],
+        )
 
-  def testGetCmdArgsWithDevKeys(self):
-    bs = firmware.BiosSigner()
-    ks = signer_unittest.KeysetFromSigner(bs, self.tempdir)
+    def testGetCmdArgsWithDevKeys(self):
+        bs = firmware.BiosSigner()
+        ks = signer_unittest.KeysetFromSigner(bs, self.tempdir)
 
-    bios_bin = os.path.join(self.tempdir, 'bios.bin')
-    bios_out = os.path.join(self.tempdir, 'bios.out')
+        bios_bin = os.path.join(self.tempdir, "bios.bin")
+        bios_out = os.path.join(self.tempdir, "bios.out")
 
-    # Add 'dev_firmware' keys and keyblock
-    dev_fw_key = keys.KeyPair('dev_firmware_data_key', keydir=self.tempdir)
-    ks.AddKey(dev_fw_key)
-    keys_unittest.CreateDummyPrivateKey(dev_fw_key)
-    keys_unittest.CreateDummyKeyblock(dev_fw_key)
+        fw_key = ks.keys["firmware_data_key"]
+        kernel_key = ks.keys["kernel_subkey"]
 
-    fw_key = ks.keys['firmware_data_key']
-    kernel_key = ks.keys['kernel_subkey']
+        self.assertListEqual(
+            bs.GetFutilityArgs(ks, bios_bin, bios_out),
+            [
+                "sign",
+                "--type",
+                "bios",
+                "--signprivate",
+                fw_key.private,
+                "--keyblock",
+                fw_key.keyblock,
+                "--kernelkey",
+                kernel_key.public,
+                "--version",
+                str(fw_key.version),
+                bios_bin,
+                bios_out,
+            ],
+        )
 
-    self.assertListEqual(bs.GetFutilityArgs(ks, bios_bin, bios_out),
-                         ['sign',
-                          '--type', 'bios',
-                          '--signprivate', fw_key.private,
-                          '--keyblock', fw_key.keyblock,
-                          '--kernelkey', kernel_key.public,
-                          '--version', str(fw_key.version),
-                          '--devsign', dev_fw_key.private,
-                          '--devkeyblock', dev_fw_key.keyblock,
-                          bios_bin, bios_out])
+    def testGetCmdArgsWithPreamble(self):
+        bs = firmware.BiosSigner(preamble_flags=1)
+        ks = signer_unittest.KeysetFromSigner(bs, self.tempdir)
 
-  def testGetCmdArgsWithPreamble(self):
-    bs = firmware.BiosSigner(preamble_flags=1)
-    ks = signer_unittest.KeysetFromSigner(bs, self.tempdir)
+        bios_bin = os.path.join(self.tempdir, "bios.bin")
+        bios_out = os.path.join(self.tempdir, "bios.out")
 
-    bios_bin = os.path.join(self.tempdir, 'bios.bin')
-    bios_out = os.path.join(self.tempdir, 'bios.out')
+        args = bs.GetFutilityArgs(ks, bios_bin, bios_out)
 
-    # Add 'dev_firmware' keys and keyblock
-    dev_fw_key = keys.KeyPair('dev_firmware_data_key', keydir=self.tempdir)
-    ks.AddKey(dev_fw_key)
-    keys_unittest.CreateDummyPrivateKey(dev_fw_key)
-    keys_unittest.CreateDummyKeyblock(dev_fw_key)
+        self.assertIn("--flags", args)
+        self.assertEqual(args[args.index("--flags") + 1], "1")
 
-    args = bs.GetFutilityArgs(ks, bios_bin, bios_out)
+    def testGetCmdArgsWithSig(self):
+        loem_dir = os.path.join(self.tempdir, "loem1", "keyset")
+        loem_id = "loem1"
 
-    self.assertIn('--flags', args)
-    self.assertEqual(args[args.index('--flags') + 1], '1')
+        bs = firmware.BiosSigner(sig_id=loem_id, sig_dir=loem_dir)
+        ks = signer_unittest.KeysetFromSigner(bs, keydir=self.tempdir)
 
-  def testGetCmdArgsWithSig(self):
-    loem_dir = os.path.join(self.tempdir, 'loem1', 'keyset')
-    loem_id = 'loem1'
+        bios_bin = os.path.join(self.tempdir, loem_id, "bios.bin")
 
-    bs = firmware.BiosSigner(sig_id=loem_id, sig_dir=loem_dir)
-    ks = signer_unittest.KeysetFromSigner(bs, keydir=self.tempdir)
+        fw_key = ks.keys["firmware_data_key"]
+        kernel_key = ks.keys["kernel_subkey"]
 
-    bios_bin = os.path.join(self.tempdir, loem_id, 'bios.bin')
-
-    fw_key = ks.keys['firmware_data_key']
-    kernel_key = ks.keys['kernel_subkey']
-
-    self.assertListEqual(bs.GetFutilityArgs(ks, bios_bin, loem_dir),
-                         ['sign',
-                          '--type', 'bios',
-                          '--signprivate', fw_key.private,
-                          '--keyblock', fw_key.keyblock,
-                          '--kernelkey', kernel_key.public,
-                          '--version', str(fw_key.version),
-                          '--devsign', fw_key.private,
-                          '--devkeyblock', fw_key.keyblock,
-                          '--loemdir', loem_dir,
-                          '--loemid', loem_id,
-                          bios_bin, loem_dir])
+        self.assertListEqual(
+            bs.GetFutilityArgs(ks, bios_bin, loem_dir),
+            [
+                "sign",
+                "--type",
+                "bios",
+                "--signprivate",
+                fw_key.private,
+                "--keyblock",
+                fw_key.keyblock,
+                "--kernelkey",
+                kernel_key.public,
+                "--version",
+                str(fw_key.version),
+                "--loemdir",
+                loem_dir,
+                "--loemid",
+                loem_id,
+                bios_bin,
+                loem_dir,
+            ],
+        )
 
 
 class TestECSigner(cros_test_lib.RunCommandTempDirTestCase):
-  """Test ECSigner."""
+    """Test ECSigner."""
 
-  def testIsROSignedRW(self):
-    MockECSigner(self.rc, ec_ro=False)
-    ec_signer = firmware.ECSigner()
-    ec_bin = os.path.join(self.tempdir, 'ec.bin')
+    def testIsROSignedRW(self):
+        MockECSigner(self.rc, ec_ro=False)
+        ec_signer = firmware.ECSigner()
+        ec_bin = os.path.join(self.tempdir, "ec.bin")
 
-    self.assertFalse(ec_signer.IsROSigned(ec_bin))
+        self.assertFalse(ec_signer.IsROSigned(ec_bin))
 
-    self.assertCommandContains(['futility', 'dump_fmap', '-p', ec_bin])
+        self.assertCommandContains(["futility", "dump_fmap", "-p", ec_bin])
 
-  def testIsROSignedRO(self):
-    MockECSigner(self.rc)
-    ec_signer = firmware.ECSigner()
-    ec_bin = os.path.join(self.tempdir, 'ec.bin')
+    def testIsROSignedRO(self):
+        MockECSigner(self.rc)
+        ec_signer = firmware.ECSigner()
+        ec_bin = os.path.join(self.tempdir, "ec.bin")
 
-    self.assertTrue(ec_signer.IsROSigned(ec_bin))
+        self.assertTrue(ec_signer.IsROSigned(ec_bin))
 
-  def testSign(self):
-    MockECSigner(self.rc, ec_ro=False)
-    ec_signer = firmware.ECSigner()
-    ks = signer_unittest.KeysetFromSigner(ec_signer, self.tempdir)
-    ec_bin = os.path.join(self.tempdir, 'ec.bin')
-    bios_bin = os.path.join(self.tempdir, 'bios.bin')
+    def testSign(self):
+        MockECSigner(self.rc, ec_ro=False)
+        ec_signer = firmware.ECSigner()
+        ks = signer_unittest.KeysetFromSigner(ec_signer, self.tempdir)
+        ec_bin = os.path.join(self.tempdir, "ec.bin")
+        bios_bin = os.path.join(self.tempdir, "bios.bin")
 
-    ec_signer.Sign(ks, ec_bin, bios_bin)
+        ec_signer.Sign(ks, ec_bin, bios_bin)
 
-    self.assertCommandContains(['futility', 'sign', '--type', 'rwsig',
-                                '--prikey', ks.keys['key_ec_efs'].private,
-                                ec_bin])
-    self.assertCommandContains(['openssl', 'dgst', '-sha256', '-binary'])
-    self.assertCommandContains(['store_file_in_cbfs', bios_bin, 'ecrw'])
-    self.assertCommandContains(['store_file_in_cbfs', bios_bin, 'ecrw.hash'])
+        self.assertCommandContains(
+            [
+                "futility",
+                "sign",
+                "--type",
+                "rwsig",
+                "--prikey",
+                ks.keys["key_ec_efs"].private,
+                ec_bin,
+            ]
+        )
+        self.assertCommandContains(["openssl", "dgst", "-sha256", "-binary"])
+        self.assertCommandContains(["store_file_in_cbfs", bios_bin, "ecrw"])
+        self.assertCommandContains(
+            ["store_file_in_cbfs", bios_bin, "ecrw.hash"]
+        )
 
 
 class TestFirmwareSigner(cros_test_lib.RunCommandTempDirTestCase):
-  """Test FirmwareSigner."""
+    """Test FirmwareSigner."""
 
-  def setUp(self):
-    MockFirmwareSigner(self.rc)
+    def setUp(self):
+        MockFirmwareSigner(self.rc)
 
-  def testSignOneSimple(self):
-    fs = firmware.FirmwareSigner()
-    ks = signer_unittest.KeysetFromSigner(fs, self.tempdir)
+    def testSignOneSimple(self):
+        fs = firmware.FirmwareSigner()
+        ks = signer_unittest.KeysetFromSigner(fs, self.tempdir)
 
-    shellball_dir = os.path.join(self.tempdir, 'shellball')
-    bios_path = os.path.join(shellball_dir, 'bios.bin')
+        shellball_dir = os.path.join(self.tempdir, "shellball")
+        bios_path = os.path.join(shellball_dir, "bios.bin")
 
-    fs.SignOne(ks, self.tempdir, bios_path)
+        fs.SignOne(ks, self.tempdir, bios_path)
 
-    self.assertCommandContains(['futility', 'sign', '--type', 'bios'])
-    self.assertCommandContains(['futility', 'gbb'])
+        self.assertCommandContains(["futility", "sign", "--type", "bios"])
+        self.assertCommandContains(["futility", "gbb"])
 
-  def testSignOneWithEC(self):
-    fs = firmware.FirmwareSigner()
-    keyset_dir = os.path.join(self.tempdir, 'keyset')
-    ks = keys_unittest.KeysetMock(keyset_dir)
-    ks.CreateDummyKeys()
+    def testSignOneWithEC(self):
+        fs = firmware.FirmwareSigner()
+        keyset_dir = os.path.join(self.tempdir, "keyset")
+        ks = keys_unittest.KeysetMock(keyset_dir)
+        ks.CreateStubKeys()
 
-    shellball_dir = os.path.join(self.tempdir, 'shellball')
-    bios_path = os.path.join(shellball_dir, 'bios.bin')
-    ec_path = os.path.join(shellball_dir, 'ec.bin')
+        shellball_dir = os.path.join(self.tempdir, "shellball")
+        bios_path = os.path.join(shellball_dir, "bios.bin")
+        ec_path = os.path.join(shellball_dir, "ec.bin")
 
-    fs.SignOne(ks, self.tempdir, bios_path, ec_image=ec_path)
+        fs.SignOne(ks, self.tempdir, bios_path, ec_image=ec_path)
 
-    self.assertCommandContains(['futility', 'sign', '--type', 'rwsig', ec_path])
+        self.assertCommandContains(
+            ["futility", "sign", "--type", "rwsig", ec_path]
+        )
 
-  def testSignOneWithLoem(self):
-    fs = firmware.FirmwareSigner()
-    keyset_dir = os.path.join(self.tempdir, 'keyset')
-    ks = keys_unittest.KeysetMock(keyset_dir)
-    ks.CreateDummyKeys()
-    ks_subset = ks.GetBuildKeyset('ACME')
+    def testSignOneWithLoem(self):
+        fs = firmware.FirmwareSigner()
+        keyset_dir = os.path.join(self.tempdir, "keyset")
+        ks = keys_unittest.KeysetMock(keyset_dir)
+        ks.CreateStubKeys()
+        ks_subset = ks.GetBuildKeyset("ACME")
 
-    shellball_dir = os.path.join(self.tempdir, 'shellball')
-    bios_path = os.path.join(shellball_dir, 'bios.bin')
+        shellball_dir = os.path.join(self.tempdir, "shellball")
+        bios_path = os.path.join(shellball_dir, "bios.bin")
 
-    fs.SignOne(ks, shellball_dir, bios_path, model_name='acme-board',
-               key_id='ACME')
+        fs.SignOne(
+            ks, shellball_dir, bios_path, model_name="acme-board", key_id="ACME"
+        )
 
-    self.assertExists(os.path.join(shellball_dir, 'rootkey.acme-board'))
+        self.assertExists(os.path.join(shellball_dir, "rootkey.acme-board"))
 
-    self.assertCommandContains(['futility', 'sign', '--type', 'bios',
-                                '--signprivate',
-                                ks_subset.keys['firmware_data_key'].private])
+        self.assertCommandContains(
+            [
+                "futility",
+                "sign",
+                "--type",
+                "bios",
+                "--signprivate",
+                ks_subset.keys["firmware_data_key"].private,
+            ]
+        )
 
-  def testSignWithSignerConfig(self):
-    fs = firmware.FirmwareSigner()
-    keyset_dir = os.path.join(self.tempdir, 'keyset')
-    ks = keys_unittest.KeysetMock(keyset_dir)
-    ks.CreateDummyKeys()
+    def testSignWithSignerConfig(self):
+        fs = firmware.FirmwareSigner()
+        keyset_dir = os.path.join(self.tempdir, "keyset")
+        ks = keys_unittest.KeysetMock(keyset_dir)
+        ks.CreateStubKeys()
 
-    shellball_dir = os.path.join(self.tempdir, 'shellball')
-    osutils.SafeMakedirs(shellball_dir)
+        shellball_dir = os.path.join(self.tempdir, "shellball")
+        osutils.SafeMakedirs(shellball_dir)
 
-    # Create signer_config.csv
-    signer_config_csv = os.path.join(shellball_dir, 'signer_config.csv')
-    with open(signer_config_csv, 'w') as csv_file:
-      csv_file.write(SignerConfigsFromCSVTest.CreateCSV().read())
+        # Create signer_config.csv
+        signer_config_csv = os.path.join(shellball_dir, "signer_config.csv")
+        with open(signer_config_csv, "w", encoding="utf-8") as csv_file:
+            csv_file.write(SignerConfigsFromCSVTest.CreateCSV().read())
 
-    fs.Sign(ks, shellball_dir, None)
+        fs.Sign(ks, shellball_dir, None)
 
-    for board_config in SignerConfigsFromCSVTest.CreateBoardDicts():
-      bios_path = os.path.join(shellball_dir, board_config['firmware_image'])
-      self.assertCommandContains(['futility', 'sign', bios_path])
+        for board_config in SignerConfigsFromCSVTest.CreateBoardDicts():
+            bios_path = os.path.join(
+                shellball_dir, board_config["firmware_image"]
+            )
+            self.assertCommandContains(["futility", "sign", bios_path])
 
-  def testSignWithNoSignerConfigUnified(self):
-    """Test signing unified builds with no signer_config.csv provided."""
-    fs = firmware.FirmwareSigner()
-    keyset_dir = os.path.join(self.tempdir, 'keyset')
-    ks = keys_unittest.KeysetMock(keyset_dir)
-    ks.CreateDummyKeys()
+    def testSignWithNoSignerConfigUnified(self):
+        """Test signing unified builds with no signer_config.csv provided."""
+        fs = firmware.FirmwareSigner()
+        keyset_dir = os.path.join(self.tempdir, "keyset")
+        ks = keys_unittest.KeysetMock(keyset_dir)
+        ks.CreateStubKeys()
 
-    shellball_dir = os.path.join(self.tempdir, 'shellball')
+        shellball_dir = os.path.join(self.tempdir, "shellball")
 
-    test_bios = ('bios.loem1.bin',
-                 'bios.loem2.bin')
+        test_bios = ("bios.loem1.bin", "bios.loem2.bin")
 
-    for bios in test_bios:
-      osutils.Touch(os.path.join(shellball_dir, bios), makedirs=True)
+        for bios in test_bios:
+            osutils.Touch(os.path.join(shellball_dir, bios), makedirs=True)
 
-    fs.Sign(ks, shellball_dir, None)
+        fs.Sign(ks, shellball_dir, None)
 
-    for bios in test_bios:
-      bios_path = os.path.join(shellball_dir, bios)
-      self.assertCommandContains(['futility', 'sign', bios_path])
+        for bios in test_bios:
+            bios_path = os.path.join(shellball_dir, bios)
+            self.assertCommandContains(["futility", "sign", bios_path])
 
-    self.assertExists(os.path.join(shellball_dir, 'keyset.loem1'))
-    self.assertExists(os.path.join(shellball_dir, 'keyset.loem2'))
+        self.assertExists(os.path.join(shellball_dir, "keyset.loem1"))
+        self.assertExists(os.path.join(shellball_dir, "keyset.loem2"))
 
-  def testSignWithNoSignerConfigNonUnified(self):
-    """Test signing non-unified build with no signer_config.csv provided."""
-    fs = firmware.FirmwareSigner()
-    keyset_dir = os.path.join(self.tempdir, 'keyset')
-    ks = keys_unittest.KeysetMock(keyset_dir, has_loem_ini=False)
-    ks.CreateDummyKeys()
+    def testSignWithNoSignerConfigNonUnified(self):
+        """Test signing non-unified build with no signer_config.csv provided."""
+        fs = firmware.FirmwareSigner()
+        keyset_dir = os.path.join(self.tempdir, "keyset")
+        ks = keys_unittest.KeysetMock(keyset_dir, has_loem_ini=False)
+        ks.CreateStubKeys()
 
-    shellball_dir = os.path.join(self.tempdir, 'shellball')
+        shellball_dir = os.path.join(self.tempdir, "shellball")
 
-    test_bios = ('bios.bin',)
+        test_bios = ("bios.bin",)
 
-    for bios in test_bios:
-      osutils.Touch(os.path.join(shellball_dir, bios), makedirs=True)
+        for bios in test_bios:
+            osutils.Touch(os.path.join(shellball_dir, bios), makedirs=True)
 
-    fs.Sign(ks, shellball_dir, None)
+        fs.Sign(ks, shellball_dir, None)
 
-    for bios in test_bios:
-      bios_path = os.path.join(shellball_dir, bios)
-      self.assertCommandContains(['futility', 'sign', bios_path])
+        for bios in test_bios:
+            bios_path = os.path.join(shellball_dir, bios)
+            self.assertCommandContains(["futility", "sign", bios_path])
 
-    self.assertExists(os.path.join(shellball_dir, 'keyset'))
+        self.assertExists(os.path.join(shellball_dir, "keyset"))
 
 
 class TestGBBSigner(cros_test_lib.RunCommandTempDirTestCase):
-  """Test GBBSigner."""
+    """Test GBBSigner."""
 
-  def setUp(self):
-    MockGBBSigner(self.rc)
+    def setUp(self):
+        MockGBBSigner(self.rc)
 
-  def testGetFutilityArgs(self):
-    gb_signer = firmware.GBBSigner()
-    ks = signer_unittest.KeysetFromSigner(gb_signer, self.tempdir)
+    def testGetFutilityArgs(self):
+        gb_signer = firmware.GBBSigner()
+        ks = signer_unittest.KeysetFromSigner(gb_signer, self.tempdir)
 
-    bios_in = os.path.join(self.tempdir, 'bin.orig')
-    bios_out = os.path.join(self.tempdir, 'bios.bin')
+        bios_in = os.path.join(self.tempdir, "bin.orig")
+        bios_out = os.path.join(self.tempdir, "bios.bin")
 
-    self.assertListEqual(gb_signer.GetFutilityArgs(ks, bios_in, bios_out),
-                         ['gbb',
-                          '--set',
-                          '--recoverykey=' + ks.keys['recovery_key'].public,
-                          '--rootkey=' + ks.keys['root_key'].public,
-                          bios_in,
-                          bios_out])
+        self.assertListEqual(
+            gb_signer.GetFutilityArgs(ks, bios_in, bios_out),
+            [
+                "gbb",
+                "--set",
+                "--recoverykey=" + ks.keys["recovery_key"].public,
+                "--rootkey=" + ks.keys["root_key"].public,
+                bios_in,
+                bios_out,
+            ],
+        )
 
 
 class ShellballTest(cros_test_lib.RunCommandTempDirTestCase):
-  """Verify that shellball is being called with correct arguments."""
+    """Verify that shellball is being called with correct arguments."""
 
+    @staticmethod
+    def CmdMock(rc):
+        """Add mock commands to |rc|"""
+        rc.AddCmdResult(partial_mock.ListRegex(".* --sb_extract .*"))
+        rc.AddCmdResult(partial_mock.ListRegex(".* --sb_repack .*"))
 
-  @staticmethod
-  def CmdMock(rc):
-    """Add mock commands to |rc|"""
-    rc.AddCmdResult(partial_mock.ListRegex('.* --sb_extract .*'))
-    rc.AddCmdResult(partial_mock.ListRegex('.* --sb_repack .*'))
+    def setUp(self):
+        """Setup simple Shellball instance for mock testing."""
+        ShellballTest.CmdMock(self.rc)
+        self.sb1name = os.path.join(self.tempdir, "fooball")
+        osutils.Touch(self.sb1name)
+        self.sb1 = firmware.Shellball(self.sb1name)
 
+    def testExtractCall(self):
+        """Test arguments for image extract."""
+        out_dir = "bar"
+        expected_args = ["--sb_extract", out_dir]
 
-  def setUp(self):
-    """Setup simple Shellball instance for mock testing."""
-    ShellballTest.CmdMock(self.rc)
-    self.sb1name = os.path.join(self.tempdir, 'fooball')
-    osutils.Touch(self.sb1name)
-    self.sb1 = firmware.Shellball(self.sb1name)
+        self.sb1.Extract(out_dir)
+        self.assertCommandContains(expected_args)
 
-  def testExtractCall(self):
-    """Test arguments for image extract."""
-    out_dir = 'bar'
-    expected_args = ['--sb_extract', out_dir]
+    def testRepackCall(self):
+        """Test arguments for image repack."""
+        from_dir = "bar"
+        expected_args = ["--sb_repack", from_dir]
 
-    self.sb1.Extract(out_dir)
-    self.assertCommandContains(expected_args)
+        self.sb1.Repack(from_dir)
+        self.assertCommandContains(expected_args)
 
-  def testRepackCall(self):
-    """Test arguments for image repack."""
-    from_dir = 'bar'
-    expected_args = ['--sb_repack', from_dir]
-
-    self.sb1.Repack(from_dir)
-    self.assertCommandContains(expected_args)
-
-  def testContextManager(self):
-    with self.sb1 as sb_dir:
-      self.assertExists(sb_dir)
-      self.assertCommandContains(['--sb_extract'])
-    self.assertCommandContains(['--sb_repack'])
+    def testContextManager(self):
+        with self.sb1 as sb_dir:
+            self.assertExists(sb_dir)
+            self.assertCommandContains(["--sb_extract"])
+        self.assertCommandContains(["--sb_repack"])
 
 
 class SignerConfigsFromCSVTest(cros_test_lib.TestCase):
-  """Test SignerConfigsFromCSV function."""
+    """Test SignerConfigsFromCSV function."""
 
-  FIELDS = ('model_name', 'firmware_image', 'key_id', 'ec_image')
-  BOARDS = (('acme', 'models/acme/bios.bin', 'ACME', 'models/acme/ec.bin'),
-            ('shinra', 'models/shinra/bios.bin', 'SHINRA',
-             'models/shinra/ec.bin'),
-            ('acme-loem3', 'models/acme/bios.bin', 'loem3',
-             'models/acme/ec.bin'))
+    FIELDS = ("model_name", "firmware_image", "key_id", "ec_image")
+    BOARDS = (
+        ("acme", "models/acme/bios.bin", "ACME", "models/acme/ec.bin"),
+        ("shinra", "models/shinra/bios.bin", "SHINRA", "models/shinra/ec.bin"),
+        ("acme-loem3", "models/acme/bios.bin", "loem3", "models/acme/ec.bin"),
+    )
 
-  @staticmethod
-  def CreateBoardDicts(fields=None, boards=None):
-    """Returns list of board dicts with the given fields"""
-    fields = fields or SignerConfigsFromCSVTest.FIELDS
-    boards = boards or SignerConfigsFromCSVTest.BOARDS
+    @staticmethod
+    def CreateBoardDicts(fields=None, boards=None):
+        """Returns list of board dicts with the given fields"""
+        fields = fields or SignerConfigsFromCSVTest.FIELDS
+        boards = boards or SignerConfigsFromCSVTest.BOARDS
 
-    board_dicts = []
+        board_dicts = []
 
-    for board in boards:
-      board_dicts.append(dict(zip(fields, board)))
+        for board in boards:
+            board_dicts.append(dict(zip(fields, board)))
 
-    return board_dicts
+        return board_dicts
 
-  @staticmethod
-  def CreateCSV(fields=None, boards=None, board_dict=None):
-    fields = fields or SignerConfigsFromCSVTest.FIELDS
-    boards = boards or SignerConfigsFromCSVTest.BOARDS
+    @staticmethod
+    def CreateCSV(fields=None, boards=None, board_dict=None):
+        fields = fields or SignerConfigsFromCSVTest.FIELDS
+        boards = boards or SignerConfigsFromCSVTest.BOARDS
 
-    board_dicts = (board_dict or
-                   SignerConfigsFromCSVTest.CreateBoardDicts(fields=fields,
-                                                             boards=boards))
-    # Python 2 is picky with unicode-vs-str in the CSV module.
-    # TODO(vapier): Drop this once we're Python 3-only.
-    if sys.version_info.major < 3:
-      csv_file = io.BytesIO()
-    else:
-      csv_file = io.StringIO()
-    csv_writer = csv.DictWriter(csv_file, fields)
+        board_dicts = board_dict or SignerConfigsFromCSVTest.CreateBoardDicts(
+            fields=fields, boards=boards
+        )
+        csv_file = io.StringIO()
+        csv_writer = csv.DictWriter(csv_file, fields)
 
-    csv_writer.writeheader()
-    csv_writer.writerows(board_dicts)
+        csv_writer.writeheader()
+        csv_writer.writerows(board_dicts)
 
-    csv_file.seek(0)
-    return csv_file
+        csv_file.seek(0)
+        return csv_file
 
-  def testMissingRow(self):
-    fields = SignerConfigsFromCSVTest.BOARDS[:-1]
-    csv_file = SignerConfigsFromCSVTest.CreateCSV(fields=fields)
+    def testMissingRow(self):
+        fields = SignerConfigsFromCSVTest.BOARDS[:-1]
+        csv_file = SignerConfigsFromCSVTest.CreateCSV(fields=fields)
 
-    with self.assertRaises(csv.Error):
-      firmware.SignerConfigsFromCSV(csv_file)
+        with self.assertRaises(csv.Error):
+            firmware.SignerConfigsFromCSV(csv_file)
 
-  def testSimple(self):
-    orig_boards = SignerConfigsFromCSVTest.CreateBoardDicts()
-    csv_file = SignerConfigsFromCSVTest.CreateCSV(board_dict=orig_boards)
+    def testSimple(self):
+        orig_boards = SignerConfigsFromCSVTest.CreateBoardDicts()
+        csv_file = SignerConfigsFromCSVTest.CreateCSV(board_dict=orig_boards)
 
-    signer_configs = firmware.SignerConfigsFromCSV(csv_file)
+        signer_configs = firmware.SignerConfigsFromCSV(csv_file)
 
-    self.assertListEqual(orig_boards, signer_configs)
+        self.assertListEqual(orig_boards, signer_configs)
 
 
 class TestWriteSignerNotes(cros_test_lib.RunCommandTempDirTestCase):
-  """Test WriteSignerNotes function."""
+    """Test WriteSignerNotes function."""
 
-  def setUp(self):
-    keys_unittest.MockVbutilKey(self.rc)
+    def setUp(self):
+        keys_unittest.MockVbutilKey(self.rc)
 
-  def testSingleKey(self):
-    """Test function's output with fixed sha1sum."""
-    recovery_key = keys.KeyPair('recovery_key', self.tempdir)
-    root_key = keys.KeyPair('root_key', self.tempdir)
+    def testSingleKey(self):
+        """Test function's output with fixed sha1sum."""
+        recovery_key = keys.KeyPair("recovery_key", self.tempdir)
+        root_key = keys.KeyPair("root_key", self.tempdir)
 
-    keyset = keys.Keyset()
-    keyset.AddKey(recovery_key)
-    keyset.AddKey(root_key)
+        keyset = keys.Keyset()
+        keyset.AddKey(recovery_key)
+        keyset.AddKey(root_key)
 
-    sha1sum = keys_unittest.MOCK_SHA1SUM
-    expected_output = ['Signed with keyset in ' + self.tempdir,
-                       'recovery: ' + sha1sum,
-                       'root: ' + sha1sum]
+        sha1sum = keys_unittest.MOCK_SHA1SUM
+        expected_output = [
+            f"Signed with keyset in {self.tempdir}",
+            f"recovery: {sha1sum}",
+            f"root: {sha1sum}",
+        ]
 
-    version_signer = io.StringIO()
-    firmware.WriteSignerNotes(keyset, version_signer)
-    self.assertListEqual(expected_output,
-                         version_signer.getvalue().splitlines())
+        version_signer = io.StringIO()
+        firmware.WriteSignerNotes(keyset, version_signer)
+        self.assertListEqual(
+            expected_output, version_signer.getvalue().splitlines()
+        )
 
-  def testLoemKeys(self):
-    """Test function's output with multiple loem keys."""
-    recovery_key = keys.KeyPair('recovery_key', self.tempdir)
-    root_keys = {
-        'loem%d' % idx: keys.KeyPair('root_key.loem%d' % idx, self.tempdir)
-        for idx in range(1, 4)}
+    def testLoemKeys(self):
+        """Test function's output with multiple loem keys."""
+        recovery_key = keys.KeyPair("recovery_key", self.tempdir)
+        root_keys = {
+            "loem%d" % idx: keys.KeyPair("root_key.loem%d" % idx, self.tempdir)
+            for idx in range(1, 4)
+        }
 
-    lines = ['[loem]'] + ['%d = loem%d' % (int(loem[4:]), int(loem[4:]))
-                          for loem in sorted(root_keys.keys())]
-    contents = '\n'.join(lines) + '\n'
-    osutils.WriteFile(os.path.join(self.tempdir, 'loem.ini'), contents)
-    keyset = keys.Keyset(self.tempdir)
-    keyset.AddKey(recovery_key)
-    for k in root_keys.values():
-      keyset.AddKey(k)
+        lines = ["[loem]"] + [
+            "%d = loem%d" % (int(loem[4:]), int(loem[4:]))
+            for loem in sorted(root_keys.keys())
+        ]
+        contents = "\n".join(lines) + "\n"
+        osutils.WriteFile(os.path.join(self.tempdir, "loem.ini"), contents)
+        keyset = keys.Keyset(self.tempdir)
+        keyset.AddKey(recovery_key)
+        for k in root_keys.values():
+            keyset.AddKey(k)
 
-    sha1sum = keys_unittest.MOCK_SHA1SUM
-    expected_header = ['Signed with keyset in ' + self.tempdir,
-                       'recovery: ' + sha1sum,
-                       "List sha1sum of all loem/model's signatures:"]
+        sha1sum = keys_unittest.MOCK_SHA1SUM
+        expected_header = [
+            f"Signed with keyset in {self.tempdir}",
+            f"recovery: {sha1sum}",
+            "List sha1sum of all loem/model's signatures:",
+        ]
 
-    expected_loems = ['loem1: ' + sha1sum,
-                      'loem2: ' + sha1sum,
-                      'loem3: ' + sha1sum]
+        expected_loems = [
+            "loem1: " + sha1sum,
+            "loem2: " + sha1sum,
+            "loem3: " + sha1sum,
+        ]
 
-    version_signer = io.StringIO()
-    firmware.WriteSignerNotes(keyset, version_signer)
+        version_signer = io.StringIO()
+        firmware.WriteSignerNotes(keyset, version_signer)
 
-    output = version_signer.getvalue().splitlines()
+        output = version_signer.getvalue().splitlines()
 
-    output_header = output[:len(expected_header)]
-    output_loem = output[len(expected_header):]
+        output_header = output[: len(expected_header)]
+        output_loem = output[len(expected_header) :]
 
-    output_loem.sort() # loem's can be out of order, so sort first.
+        output_loem.sort()  # loem's can be out of order, so sort first.
 
-    self.assertListEqual(expected_header, output_header)
-    self.assertListEqual(expected_loems, output_loem)
+        self.assertListEqual(expected_header, output_header)
+        self.assertListEqual(expected_loems, output_loem)

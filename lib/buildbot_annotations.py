@@ -1,4 +1,4 @@
-# Copyright 2016 The Chromium OS Authors. All rights reserved.
+# Copyright 2016 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -9,105 +9,115 @@ import itertools
 import json
 
 
-class Annotation(object):
-  """Formatted annotation for buildbot."""
+class Annotation:
+    """Formatted annotation for buildbot."""
 
-  def __init__(self, name, args):
-    """Initialize instance.
+    def __init__(self, name, args):
+        """Initialize instance.
 
-    Args:
-      name: Annotation name.
-      args: A sequence of string arguments.
-    """
-    self.name = name
-    self.args = args
+        Args:
+            name: Annotation name.
+            args: A sequence of string arguments.
+        """
+        self.name = name
+        self.args = args
 
-  def __str__(self):
-    inner_text = '@'.join(
-        _EscapeArgText(text)
-        for text in itertools.chain([self.name], self.args)
-    )
-    return '@@@%s@@@' % (inner_text,)
+    def __str__(self):
+        inner_text = "@".join(
+            _EscapeArgText(text)
+            for text in itertools.chain([self.name], self.args)
+        )
+        return "@@@%s@@@" % (inner_text,)
 
-  @property
-  def human_friendly(self):
-    """Human-friendly format."""
-    if self.args:
-      return '%s: %s' % (self.name, '; '.join(self.args))
-    else:
-      return self.name
+    @property
+    def human_friendly(self):
+        """Human-friendly format."""
+        if self.args:
+            return "%s: %s" % (self.name, "; ".join(self.args))
+        else:
+            return self.name
 
 
 class _NamedAnnotation(Annotation, metaclass=abc.ABCMeta):
-  """Abstract subclass for creating named annotations.
+    """Abstract subclass for creating named annotations.
 
-  Concrete subclasses should define the ANNOTATION_NAME class attribute.
-  """
+    Concrete subclasses should define the ANNOTATION_NAME class attribute.
+    """
 
-  def __init__(self, *args):
-    super().__init__(self.ANNOTATION_NAME, args)
+    def __init__(self, *args):
+        super().__init__(self.ANNOTATION_NAME, args)
 
-  @abc.abstractproperty
-  def ANNOTATION_NAME(self):
-    raise NotImplementedError()
+    # TODO(b/236161656): Fix.
+    # pylint: disable-next=deprecated-decorator
+    @abc.abstractproperty
+    def ANNOTATION_NAME(self):
+        raise NotImplementedError()
 
 
 class StepLink(_NamedAnnotation):
-  """STEP_LINK annotation."""
-  ANNOTATION_NAME = 'STEP_LINK'
+    """STEP_LINK annotation."""
 
-  # Some callers pass in text/url by kwarg.  We leave the full signature here
-  # so the API is a bit cleaner/more obvious.
-  # pylint: disable=useless-super-delegation
-  def __init__(self, text, url):
-    super().__init__(text, url)
+    ANNOTATION_NAME = "STEP_LINK"
+
+    # Some callers pass in text/url by kwarg.  We leave the full signature here
+    # so the API is a bit cleaner/more obvious.
+    # pylint: disable=useless-super-delegation
+    def __init__(self, text, url):
+        super().__init__(text, url)
 
 
 class StepText(_NamedAnnotation):
-  """STEP_TEXT annotation."""
-  ANNOTATION_NAME = 'STEP_TEXT'
+    """STEP_TEXT annotation."""
+
+    ANNOTATION_NAME = "STEP_TEXT"
 
 
 class StepWarnings(_NamedAnnotation):
-  """STEP_WARNINGS annotation."""
-  ANNOTATION_NAME = 'STEP_WARNINGS'
+    """STEP_WARNINGS annotation."""
+
+    ANNOTATION_NAME = "STEP_WARNINGS"
 
 
 class StepFailure(_NamedAnnotation):
-  """STEP_FAILURE annotation."""
-  ANNOTATION_NAME = 'STEP_FAILURE'
+    """STEP_FAILURE annotation."""
+
+    ANNOTATION_NAME = "STEP_FAILURE"
 
 
 class BuildStep(_NamedAnnotation):
-  """BUILD_STEP annotation."""
-  ANNOTATION_NAME = 'BUILD_STEP'
+    """BUILD_STEP annotation."""
+
+    ANNOTATION_NAME = "BUILD_STEP"
 
 
 class SetBuildProperty(_NamedAnnotation):
-  """SET_BUILD_PROPERTY annotation."""
-  ANNOTATION_NAME = 'SET_BUILD_PROPERTY'
+    """SET_BUILD_PROPERTY annotation."""
 
-  def __init__(self, name, value):
-    super().__init__(name, json.dumps(value))
+    ANNOTATION_NAME = "SET_BUILD_PROPERTY"
+
+    def __init__(self, name, value):
+        super().__init__(name, json.dumps(value))
 
 
 class SetEmailNotifyProperty(_NamedAnnotation):
-  """SET_BUILD_PROPERTY annotation for email_notify."""
-  ANNOTATION_NAME = 'SET_BUILD_PROPERTY'
+    """SET_BUILD_PROPERTY annotation for email_notify."""
 
-  def __init__(self, name, value):
-    super().__init__(name, json.dumps(value))
+    ANNOTATION_NAME = "SET_BUILD_PROPERTY"
 
-  def __str__(self):
-    inner_text = '@'.join(
-        text for text in itertools.chain([self.name], self.args))
-    return '@@@%s@@@' % (inner_text)
+    def __init__(self, name, value):
+        super().__init__(name, json.dumps(value))
+
+    def __str__(self):
+        inner_text = "@".join(
+            text for text in itertools.chain([self.name], self.args)
+        )
+        return "@@@%s@@@" % (inner_text)
 
 
 def _EscapeArgText(text):
-  """Escape annotation argument text.
+    """Escape annotation argument text.
 
-  Args:
-    text: String to escape.
-  """
-  return text.replace('@', '-AT-')
+    Args:
+        text: String to escape.
+    """
+    return text.replace("@", "-AT-")

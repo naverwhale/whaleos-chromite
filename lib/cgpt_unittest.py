@@ -1,8 +1,10 @@
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Test chromite.lib.cgpt"""
+
+from unittest import mock
 
 from chromite.lib import cgpt
 from chromite.lib import cros_test_lib
@@ -67,105 +69,139 @@ CGPT_SHOW_OUTPUT = """start        size    part  contents
 
 
 class TestDisk(cros_test_lib.RunCommandTestCase):
-  """Test Disk class."""
+    """Test Disk class."""
 
-  def getMockDisk(self):
-    """Returns new Disk based on CGPT_SHOW_OUTPUT."""
-    self.rc.SetDefaultCmdResult(output=CGPT_SHOW_OUTPUT)
-    return cgpt.Disk.FromImage('foo')
+    def getMockDisk(self):
+        """Returns new Disk based on CGPT_SHOW_OUTPUT."""
+        self.rc.SetDefaultCmdResult(stdout=CGPT_SHOW_OUTPUT)
+        return cgpt.Disk.FromImage("foo")
 
-  def testDiskFromImageEmpty(self):
-    """Test ReadGpt when cgpt doesn't return an expected list."""
-    with self.assertRaises(cgpt.Error):
-      cgpt.Disk.FromImage('foo')
+    def testDiskFromImageEmpty(self):
+        """Test ReadGpt when cgpt doesn't return an expected list."""
+        with self.assertRaises(cgpt.Error):
+            cgpt.Disk.FromImage("foo")
 
-  def testDiskFromImage(self):
-    """Test ReadGpt with mock cgpt output."""
-    which_mock = self.PatchObject(osutils, 'Which', return_value='/path/foo')
-    disk = self.getMockDisk()
+    def testDiskFromImage(self):
+        """Test ReadGpt with mock cgpt output."""
+        which_mock = self.PatchObject(
+            osutils, "Which", return_value="/path/foo"
+        )
+        disk = self.getMockDisk()
 
-    which_mock.assert_called_once()
-    self.assertCommandCalled(['cgpt', 'show', '-n', 'foo'],
-                             enter_chroot=False, capture_output=True,
-                             encoding='utf-8')
+        which_mock.assert_called_once()
+        self.assertCommandCalled(
+            ["cgpt", "show", "-n", "foo"],
+            enter_chroot=False,
+            chroot_args=mock.ANY,
+            capture_output=True,
+            encoding="utf-8",
+        )
 
-    self.assertEqual(len(disk.partitions), 12)
+        self.assertEqual(len(disk.partitions), 12)
 
-    self.assertEqual(disk.partitions[3],
-                     cgpt.Partition(part_num=3,
-                                    label='ROOT-A',
-                                    start=471040,
-                                    size=4915200,
-                                    part_type='3CB8E202-3B7E-47DD-'
-                                              '8A3C-7FF2A13CFCEC',
-                                    uuid='FC606456-D6E0-C64D-A82E-BA7B027D2B20',
-                                    attr='[0]'))
+        self.assertEqual(
+            disk.partitions[3],
+            cgpt.Partition(
+                part_num=3,
+                label="ROOT-A",
+                start=471040,
+                size=4915200,
+                part_type="3CB8E202-3B7E-47DD-" "8A3C-7FF2A13CFCEC",
+                uuid="FC606456-D6E0-C64D-A82E-BA7B027D2B20",
+                attr="[0]",
+            ),
+        )
 
-  def testDiskFromImageCgptMissing(self):
-    """Test ReadGpt with mock cgpt output when cpgt is missing."""
-    which_mock = self.PatchObject(osutils, 'Which', return_value=None)
-    to_chroot_path_mock = self.PatchObject(path_util, 'ToChrootPath',
-                                           return_value='foo')
-    disk = self.getMockDisk()
+    def testDiskFromImageCgptMissing(self):
+        """Test ReadGpt with mock cgpt output when cpgt is missing."""
+        which_mock = self.PatchObject(osutils, "Which", return_value=None)
+        to_chroot_path_mock = self.PatchObject(
+            path_util, "ToChrootPath", return_value="foo"
+        )
+        disk = self.getMockDisk()
 
-    which_mock.assert_called_once()
-    to_chroot_path_mock.assert_called_once()
+        which_mock.assert_called_once()
+        to_chroot_path_mock.assert_called_once()
 
-    self.assertCommandCalled(['cgpt', 'show', '-n', 'foo'], enter_chroot=True,
-                             capture_output=True, encoding='utf-8')
+        self.assertCommandCalled(
+            ["cgpt", "show", "-n", "foo"],
+            enter_chroot=True,
+            chroot_args=mock.ANY,
+            capture_output=True,
+            encoding="utf-8",
+        )
 
-    self.assertEqual(len(disk.partitions), 12)
+        self.assertEqual(len(disk.partitions), 12)
 
-    self.assertEqual(disk.partitions[3],
-                     cgpt.Partition(part_num=3,
-                                    label='ROOT-A',
-                                    start=471040,
-                                    size=4915200,
-                                    part_type='3CB8E202-3B7E-47DD-'
-                                              '8A3C-7FF2A13CFCEC',
-                                    uuid='FC606456-D6E0-C64D-A82E-BA7B027D2B20',
-                                    attr='[0]'))
+        self.assertEqual(
+            disk.partitions[3],
+            cgpt.Partition(
+                part_num=3,
+                label="ROOT-A",
+                start=471040,
+                size=4915200,
+                part_type="3CB8E202-3B7E-47DD-" "8A3C-7FF2A13CFCEC",
+                uuid="FC606456-D6E0-C64D-A82E-BA7B027D2B20",
+                attr="[0]",
+            ),
+        )
 
-  def testGetPartitionByLabel(self):
-    """Test that mocked disk has all expected partitions."""
-    disk = self.getMockDisk()
+    def testGetPartitionByLabel(self):
+        """Test that mocked disk has all expected partitions."""
+        disk = self.getMockDisk()
 
-    for label, part_num in (('STATE', 1),
-                            ('KERN-A', 2),
-                            ('ROOT-A', 3),
-                            ('KERN-B', 4),
-                            ('ROOT-B', 5),
-                            ('KERN-C', 6),
-                            ('ROOT-C', 7),
-                            ('OEM', 8),
-                            ('MINIOS-A', 9),
-                            ('EFI-SYSTEM', 12)):
-      self.assertEqual(disk.GetPartitionByLabel(label).part_num, part_num)
+        for label, part_num in (
+            ("STATE", 1),
+            ("KERN-A", 2),
+            ("ROOT-A", 3),
+            ("KERN-B", 4),
+            ("ROOT-B", 5),
+            ("KERN-C", 6),
+            ("ROOT-C", 7),
+            ("OEM", 8),
+            ("MINIOS-A", 9),
+            ("EFI-SYSTEM", 12),
+        ):
+            self.assertEqual(disk.GetPartitionByLabel(label).part_num, part_num)
 
-  def testGetPartitionByLabelMulitpleLabels(self):
-    """Test MultiplePartitionLabel is raised on duplicate label 'reserved'."""
-    disk = self.getMockDisk()
+    def testGetPartitionByLabelMultipleLabels(self):
+        """Test MultiplePartitionLabel raised on duplicate label 'reserved'."""
+        disk = self.getMockDisk()
 
-    with self.assertRaises(cgpt.MultiplePartitionLabel):
-      disk.GetPartitionByLabel('reserved')
+        with self.assertRaises(cgpt.MultiplePartitionLabel):
+            disk.GetPartitionByLabel("reserved")
 
-  def testGetPartitionByLabelMissingKey(self):
-    """Test KeyError is raised on a non-existent label."""
-    disk = self.getMockDisk()
+    def testGetPartitionByLabelMissingKey(self):
+        """Test KeyError is raised on a non-existent label."""
+        disk = self.getMockDisk()
 
-    with self.assertRaises(KeyError):
-      disk.GetPartitionByLabel('bar')
+        with self.assertRaises(KeyError):
+            disk.GetPartitionByLabel("bar")
 
-  def testGetPartitionsByTypeGuid(self):
-    """Test that mocked disk has all expected partitions."""
-    disk = self.getMockDisk()
+    def testGetPartitionsByTypeGuid(self):
+        """Test that mocked disk has all expected partitions."""
+        disk = self.getMockDisk()
 
-    self.assertEqual([p.part_num for p in disk.GetPartitionByTypeGuid(
-        '09845860-705F-4BB5-B16C-8A8A099CAF52')], [9])
+        self.assertEqual(
+            [
+                p.part_num
+                for p in disk.GetPartitionByTypeGuid(
+                    "09845860-705F-4BB5-B16C-8A8A099CAF52"
+                )
+            ],
+            [9],
+        )
 
-  def testGetPartitionsByTypeGuidMulti(self):
-    """Test that mocked disk has all expected partitions."""
-    disk = self.getMockDisk()
+    def testGetPartitionsByTypeGuidMulti(self):
+        """Test that mocked disk has all expected partitions."""
+        disk = self.getMockDisk()
 
-    self.assertEqual([p.part_num for p in disk.GetPartitionByTypeGuid(
-        '2E0A753D-9E48-43B0-8337-B15192CB1B5E')], [10, 11])
+        self.assertEqual(
+            [
+                p.part_num
+                for p in disk.GetPartitionByTypeGuid(
+                    "2E0A753D-9E48-43B0-8337-B15192CB1B5E"
+                )
+            ],
+            [10, 11],
+        )

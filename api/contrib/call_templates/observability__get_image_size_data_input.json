@@ -1,0 +1,8 @@
+{
+  "built_images": [
+    {
+      "path": "/mnt/host/source/src/build/images/%(build_target)s/latest/chromiumos_base_image.bin",
+      "type": 1
+    }
+  ]
+}

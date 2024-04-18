@@ -1,0 +1,15 @@
+MODULE Linux x86 D3096ED481217FD4C16B29CD9BC208BA0 foo
+INFO CODE_ID E562AC6DCD9DB72E
+FILE 0 /build/eve/usr/include/bits/stdio2.h
+FILE 1 /build/eve/tmp/portage/something/filename with spaces.c
+INLINE_ORIGIN 2 nsQueryInterfaceWithError::operator()(nsID const&, void**) const
+FUNC m c184 30 0 nsQueryInterfaceWithError::operator()(nsID const&, void**) const
+FUNC fb0
+INLINE 0 10 3 4 d30 2a fa1 b
+c184 7 59 4
+PUBLIC m 2160 0 Public with space
+PUBLIC m 2170 0 Public2_1
+PUBLIC 2180 0 _fini
+STACK CFI INIT 804c4b0 40 .cfa: $esp 4 + $eip: .cfa 4 - ^
+STACK CFI 804c4b1 .cfa: $esp 8 + $ebp: .cfa 8 - ^
+STACK CFI 804c4b2 .cfa: $esp

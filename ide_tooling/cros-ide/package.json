@@ -1,0 +1,1367 @@
+{
+  "name": "cros-ide",
+  "displayName": "ChromiumIDE",
+  "description": "Chromium(OS) Development",
+  "version": "0.23.3",
+  "publisher": "Google",
+  "author": {
+    "name": "ChromeOS Velocity Team at Google"
+  },
+  "repository": "https://chromium.googlesource.com/chromiumos/chromite/+/HEAD/ide_tooling",
+  "license": "BSD-3-Clause",
+  "engines": {
+    "vscode": "^1.75.1",
+    "node": "16.x"
+  },
+  "icon": "media/cros-device.png",
+  "categories": [
+    "Linters",
+    "Other",
+    "Programming Languages",
+    "Testing"
+  ],
+  "activationEvents": [
+    "onCommand:workbench.action.tasks.runTask",
+    "onLanguage"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "chromiumide.boardsAndPackages.build",
+        "category": "CrOS",
+        "title": "Build the package"
+      },
+      {
+        "command": "chromiumide.boardsAndPackages.crosWorkonStart",
+        "category": "CrOS",
+        "title": "Start Working on"
+      },
+      {
+        "command": "chromiumide.boardsAndPackages.crosWorkonStop",
+        "category": "CrOS",
+        "title": "Stop Working On",
+        "icon": "$(remove)"
+      },
+      {
+        "command": "chromiumide.boardsAndPackages.favoriteAdd",
+        "category": "CrOS",
+        "title": "Add to favorite"
+      },
+      {
+        "command": "chromiumide.boardsAndPackages.favoriteDelete",
+        "category": "CrOS",
+        "title": "Delete from favorite"
+      },
+      {
+        "command": "chromiumide.boardsAndPackages.openEbuild",
+        "category": "CrOS",
+        "title": "Open Ebuild",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "chromiumide.boardsAndPackages.setDefaultBoard",
+        "category": "CrOS",
+        "title": "Set as Default Board"
+      },
+      {
+        "command": "chromiumide.chrome.build",
+        "category": "CrOS",
+        "title": "Build + Deploy Ash + Lacros to DUT",
+        "icon": "$(window)",
+        "enablement": "config.chromiumide.underDevelopment.chromiumBuild"
+      },
+      {
+        "command": "chromiumide.chrome.watchBuild",
+        "category": "CrOS",
+        "title": "Build + Deploy Ash + Lacros to DUT, restarts build on save of any file",
+        "icon": "$(window)",
+        "enablement": "config.chromiumide.underDevelopment.chromiumBuild"
+      },
+      {
+        "command": "chromiumide.cppxrefs.forceGenerate",
+        "category": "CrOS",
+        "title": "Generate C++ xrefs for the active file"
+      },
+      {
+        "command": "chromiumide.deviceManagement.connectToDeviceForScreen",
+        "category": "CrOS",
+        "title": "Connect to Device (VNC)",
+        "icon": "$(window)"
+      },
+      {
+        "command": "chromiumide.deviceManagement.connectToDeviceForRotatedScreen",
+        "category": "CrOS",
+        "title": "Connect to Device (VNC) with rotation",
+        "icon": "$(window)"
+      },
+      {
+        "command": "chromiumide.deviceManagement.connectToDeviceForShell",
+        "category": "CrOS",
+        "title": "Connect to Device (Shell)",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "chromiumide.deviceManagement.openSystemLogViewer",
+        "category": "CrOS",
+        "title": "Open System Log Viewer",
+        "icon": "$(output)"
+      },
+      {
+        "command": "chromiumide.deviceManagement.addDevice",
+        "category": "CrOS",
+        "title": "Add New Device",
+        "icon": "$(add)"
+      },
+      {
+        "command": "chromiumide.deviceManagement.addExistingHosts",
+        "category": "CrOS",
+        "title": "Add Existing Device Host Names from the SSH Config File",
+        "icon": "$(add)"
+      },
+      {
+        "command": "chromiumide.deviceManagement.deleteDevice",
+        "category": "CrOS",
+        "title": "Delete Device",
+        "icon": "$(remove)"
+      },
+      {
+        "command": "chromiumide.deviceManagement.flashPrebuiltImage",
+        "category": "CrOS",
+        "title": "Flash Image to Device",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "chromiumide.deviceManagement.crosfleetLogin",
+        "category": "CrOS",
+        "title": "Log in to crosfleet"
+      },
+      {
+        "command": "chromiumide.deviceManagement.refreshLeases",
+        "category": "CrOS",
+        "title": "Refresh Leased Device List",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "chromiumide.deviceManagement.addLease",
+        "category": "CrOS",
+        "title": "Lease a Device",
+        "icon": "$(add)"
+      },
+      {
+        "command": "chromiumide.deviceManagement.abandonLease",
+        "category": "CrOS",
+        "title": "Abandon the Device",
+        "icon": "$(close)"
+      },
+      {
+        "command": "chromiumide.deviceManagement.copyHostname",
+        "category": "CrOS",
+        "title": "Copy Hostname"
+      },
+      {
+        "command": "chromiumide.deviceManagement.debugTastTests",
+        "category": "CrOS",
+        "title": "Debug tast tests",
+        "icon": "$(debug-alt)",
+        "enablement": "config.chromiumide.underDevelopment.tastDebugging"
+      },
+      {
+        "command": "chromiumide.deviceManagement.runTastTests",
+        "category": "CrOS",
+        "title": "Run tast tests",
+        "icon": "$(play)"
+      },
+      {
+        "command": "chromiumide.codeSearchOpenCurrentFile",
+        "category": "CrOS",
+        "title": "Open in Code Search"
+      },
+      {
+        "command": "chromiumide.codeSearchOpen",
+        "title": "Open in Code Search"
+      },
+      {
+        "command": "chromiumide.codeSearchCopyCurrentFile",
+        "category": "CrOS",
+        "title": "Copy Code Search URL to clipboard"
+      },
+      {
+        "command": "chromiumide.codeSearchSearchForSelection",
+        "category": "CrOS",
+        "title": "Search for selection in Code Search"
+      },
+      {
+        "command": "chromiumide.selectBoard",
+        "category": "CrOS",
+        "title": "Select target board"
+      },
+      {
+        "command": "chromiumide.fileIdeBug",
+        "category": "CrOS",
+        "title": "File a bug on Buganizer"
+      },
+      {
+        "command": "chromiumide.resetUserID",
+        "category": "CrOS",
+        "title": "Generate a new random user ID for metrics collection"
+      },
+      {
+        "command": "chromiumide.coverage.generate",
+        "category": "CrOS",
+        "title": "Generate Coverage Data",
+        "enablement": "config.chromiumide.testCoverage.enabled"
+      },
+      {
+        "command": "chromiumide.gerrit.refreshComments",
+        "category": "CrOS",
+        "title": "Refresh Comments",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "chromiumide.gerrit.collapseAllCommentThreads",
+        "category": "CrOS",
+        "title": "Collapse All Comment Threads",
+        "icon": "$(collapse-all)",
+        "enablement": "config.chromiumide.gerrit.enabled"
+      },
+      {
+        "command": "chromiumide.gerrit.browseCommentThread",
+        "category": "CrOS",
+        "title": "Open in Gerrit",
+        "icon": "$(link)",
+        "enablement": "config.chromiumide.gerrit.enabled"
+      },
+      {
+        "command": "chromiumide.gerrit.browseCommentThreadAuthor",
+        "category": "CrOS",
+        "title": "Open Author's Dashboard in Gerrit",
+        "icon": "$(account)",
+        "enablement": "config.chromiumide.gerrit.enabled"
+      },
+      {
+        "command": "chromiumide.gerrit.browseComment",
+        "category": "CrOS",
+        "title": "Open in Gerrit",
+        "icon": "$(link)",
+        "enablement": "config.chromiumide.gerrit.enabled"
+      },
+      {
+        "command": "chromiumide.gerrit.browseCommentAuthor",
+        "category": "CrOS",
+        "title": "Open Author's Dashboard in Gerrit",
+        "icon": "$(account)",
+        "enablement": "config.chromiumide.gerrit.enabled"
+      },
+      {
+        "command": "chromiumide.gerrit.reply",
+        "category": "CrOS",
+        "title": "Save draft",
+        "enablement": "!commentIsEmpty"
+      },
+      {
+        "command": "chromiumide.gerrit.discardDraft",
+        "category": "CrOS",
+        "title": "Discard draft comment",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "chromiumide.gerrit.editDraft",
+        "category": "CrOS",
+        "title": "Edit draft comment",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "chromiumide.gerrit.editDraftCancel",
+        "category": "CrOS",
+        "title": "Cancel"
+      },
+      {
+        "command": "chromiumide.gerrit.editDraftReply",
+        "category": "CrOS",
+        "title": "Save draft",
+        "enablement": "!commentIsEmpty"
+      },
+      {
+        "command": "chromiumide.gerrit.editDraftReplyAndResolve",
+        "category": "CrOS",
+        "title": "Save and Resolve",
+        "enablement": "!commentIsEmpty"
+      },
+      {
+        "command": "chromiumide.gerrit.editDraftReplyAndUnresolve",
+        "category": "CrOS",
+        "title": "Save and Unresolve",
+        "enablement": "!commentIsEmpty"
+      },
+      {
+        "command": "chromiumide.gerrit.replyAndResolve",
+        "category": "CrOS",
+        "title": "Save and Resolve",
+        "enablement": "!commentIsEmpty"
+      },
+      {
+        "command": "chromiumide.gerrit.replyAndUnresolve",
+        "category": "CrOS",
+        "title": "Save and Unresolve",
+        "enablement": "!commentIsEmpty"
+      },
+      {
+        "command": "chromiumide.relatedFiles.create",
+        "title": "Create related file",
+        "enablement": "config.chromiumide.underDevelopment.relatedFiles"
+      },
+      {
+        "command": "chromiumide.showHelpForDevices",
+        "title": "Show Help",
+        "icon": "$(question)"
+      },
+      {
+        "command": "chromiumide.showHelpForGerrit",
+        "title": "ChromiumIDE Help",
+        "icon": "$(question)"
+      },
+      {
+        "command": "chromiumide.showHelpForIdeStatus",
+        "title": "Show Help",
+        "icon": "$(question)"
+      },
+      {
+        "command": "chromiumide.showHelpForLint",
+        "title": "ChromiumIDE Help",
+        "icon": "$(question)"
+      },
+      {
+        "command": "chromiumide.chromium.outputDirectories.viewArgsGnError",
+        "title": "View args.gn error",
+        "category": "Chromium"
+      },
+      {
+        "command": "chromiumide.chromium.outputDirectories.viewArgsGnWarnings",
+        "title": "View args.gn warnings",
+        "category": "Chromium"
+      },
+      {
+        "command": "chromiumide.chromium.outputDirectories.editArgs",
+        "title": "Edit args.gn",
+        "category": "Chromium"
+      },
+      {
+        "command": "chromiumide.chromium.outputDirectories.setCurrentLink",
+        "title": "Set as output directory",
+        "category": "Chromium"
+      },
+      {
+        "command": "chromiumide.chromium.outputDirectories.refresh",
+        "title": "Refresh output directories",
+        "icon": "$(refresh)",
+        "category": "Chromium"
+      },
+      {
+        "command": "chromiumide.chromium.gitcl.format",
+        "title": "git cl format",
+        "icon": "$(whitespace)",
+        "category": "Chromium"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cros-view",
+          "title": "Chromium(OS) Development",
+          "icon": "media/cros-device.svg"
+        }
+      ]
+    },
+    "views": {
+      "cros-view": [
+        {
+          "id": "devices",
+          "name": "Devices"
+        },
+        {
+          "id": "boards-and-packages",
+          "name": "Boards and Packages"
+        },
+        {
+          "id": "chromiumide-status",
+          "name": "IDE Status"
+        }
+      ],
+      "explorer": [
+        {
+          "id": "chromiumide.chromium.outputDirectories",
+          "name": "Chromium: Output Directories",
+          "when": "config.chromiumide.chrome.outputDirectories"
+        }
+      ]
+    },
+    "menus": {
+      "comments/commentThread/title": [
+        {
+          "command": "chromiumide.gerrit.browseCommentThread",
+          "group": "inline@1",
+          "when": "commentThread =~ /<public>/"
+        },
+        {
+          "command": "chromiumide.gerrit.browseCommentThreadAuthor",
+          "group": "inline@2"
+        },
+        {
+          "command": "chromiumide.gerrit.collapseAllCommentThreads",
+          "group": "inline@3"
+        }
+      ],
+      "comments/commentThread/context": [
+        {
+          "command": "chromiumide.gerrit.reply",
+          "group": "inline@a",
+          "when": "commentController == chromiumide-gerrit"
+        },
+        {
+          "command": "chromiumide.gerrit.replyAndResolve",
+          "group": "inline@b",
+          "when": "commentController == chromiumide-gerrit && commentThread =~ /<unresolved>/"
+        },
+        {
+          "command": "chromiumide.gerrit.replyAndUnresolve",
+          "group": "inline@b",
+          "when": "commentController == chromiumide-gerrit && commentThread =~ /<resolved>/"
+        }
+      ],
+      "comments/comment/title": [
+        {
+          "command": "chromiumide.gerrit.discardDraft",
+          "group": "inline@1",
+          "when": "comment =~ /<draft>/"
+        },
+        {
+          "command": "chromiumide.gerrit.editDraft",
+          "group": "inline@2",
+          "when": "comment =~ /<draft>/ && !(comment =~ /<editing>/)"
+        },
+        {
+          "command": "chromiumide.gerrit.browseComment",
+          "group": "inline@3",
+          "when": "comment =~ /<public>/"
+        },
+        {
+          "command": "chromiumide.gerrit.browseCommentAuthor",
+          "group": "inline@4"
+        }
+      ],
+      "comments/comment/context": [
+        {
+          "command": "chromiumide.gerrit.editDraftReply",
+          "group": "inline@1",
+          "when": "comment =~ /<editing>/"
+        },
+        {
+          "command": "chromiumide.gerrit.editDraftReplyAndResolve",
+          "group": "inline@2",
+          "when": "comment =~ /<editing>/ && comment =~ /<unresolved>/"
+        },
+        {
+          "command": "chromiumide.gerrit.editDraftReplyAndUnresolve",
+          "group": "inline@3",
+          "when": "comment =~ /<editing>/ && comment =~ /<resolved>/"
+        },
+        {
+          "command": "chromiumide.gerrit.editDraftCancel",
+          "group": "inline@4",
+          "when": "comment =~ /<editing>/"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "chromiumide.codeSearchOpenCurrentFile"
+        },
+        {
+          "command": "chromiumide.codeSearchCopyCurrentFile"
+        },
+        {
+          "command": "chromiumide.codeSearchSearchForSelection"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "chromiumide.deviceManagement.runTastTests",
+          "when": "resourcePath =~ /\\/src\\/platform\\/tast-tests[^\\/]*\\/(cros|src\\/(chromiumos\\/tast|go\\.chromium\\.org\\/tast-tests\\/cros))\\/(local|remote)\\/bundles\\/[^\\/]+\\/[^\\/]+\\/[^\\/]+.go$/",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "chromiumide.codeSearchOpen",
+          "group": "6_copypath"
+        }
+      ],
+      "scm/title": [
+        {
+          "command": "chromiumide.chromium.gitcl.format",
+          "when": "scmProvider == git && scmProviderRootUri in chromiumide.chromium.src-uris",
+          "group": "navigation@-3"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "chromiumide.gerrit.refreshComments",
+          "when": "view == workbench.panel.comments",
+          "group": "navigation"
+        },
+        {
+          "command": "chromiumide.showHelpForDevices",
+          "when": "view == devices",
+          "group": "navigation"
+        },
+        {
+          "command": "chromiumide.showHelpForGerrit",
+          "when": "view == workbench.panel.comments",
+          "group": "navigation"
+        },
+        {
+          "command": "chromiumide.showHelpForIdeStatus",
+          "when": "view == chromiumide-status",
+          "group": "navigation"
+        },
+        {
+          "command": "chromiumide.showHelpForLint",
+          "when": "view == workbench.panel.markers.view",
+          "group": "navigation"
+        },
+        {
+          "command": "chromiumide.chromium.outputDirectories.refresh",
+          "when": "view == chromiumide.chromium.outputDirectories",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "chromiumide.boardsAndPackages.build",
+          "when": "config.chromiumide.underDevelopment.buildAndDeploy && view == boards-and-packages && viewItem =~ /<package>/",
+          "group": "3_build"
+        },
+        {
+          "command": "chromiumide.boardsAndPackages.crosWorkonStart",
+          "when": "view == boards-and-packages && viewItem =~ /<package>/ && viewItem =~ /<stopped>/",
+          "group": "3_build"
+        },
+        {
+          "command": "chromiumide.boardsAndPackages.crosWorkonStop",
+          "when": "view == boards-and-packages && viewItem =~ /<package>/ && viewItem =~ /<started>/",
+          "group": "3_build"
+        },
+        {
+          "command": "chromiumide.boardsAndPackages.favoriteAdd",
+          "when": "view == boards-and-packages && viewItem =~ /(<category>|<package>)/ && !(viewItem =~ /<favorite>/)",
+          "group": "0_favorite"
+        },
+        {
+          "command": "chromiumide.boardsAndPackages.favoriteDelete",
+          "when": "view == boards-and-packages && viewItem =~ /<favorite>/",
+          "group": "0_favorite"
+        },
+        {
+          "command": "chromiumide.boardsAndPackages.openEbuild",
+          "when": "view == boards-and-packages && viewItem =~ /<package>/",
+          "group": "1_open"
+        },
+        {
+          "command": "chromiumide.boardsAndPackages.setDefaultBoard",
+          "when": "view == boards-and-packages && viewItem =~ /<board>/ && !(viewItem =~ /(<host>|<default>)/)",
+          "group": "1_set"
+        },
+        {
+          "command": "chromiumide.deviceManagement.addDevice",
+          "when": "view == devices && viewItem == category-owned",
+          "group": "inline"
+        },
+        {
+          "command": "chromiumide.cppxrefs.forceGenerate",
+          "when": "view == chromiumide-status && viewItem == cppxrefs",
+          "group": "1_generate"
+        },
+        {
+          "command": "chromiumide.deviceManagement.connectToDeviceForScreen",
+          "when": "view == devices && viewItem =~ /^device-/",
+          "group": "inline@1"
+        },
+        {
+          "command": "chromiumide.deviceManagement.connectToDeviceForScreen",
+          "when": "view == devices && viewItem =~ /^device-/",
+          "group": "1_connect@1"
+        },
+        {
+          "command": "chromiumide.deviceManagement.connectToDeviceForRotatedScreen",
+          "when": "view == devices && viewItem =~ /^device-/",
+          "group": "1_connect@2"
+        },
+        {
+          "command": "chromiumide.deviceManagement.connectToDeviceForShell",
+          "when": "view == devices && viewItem =~ /^device-/",
+          "group": "inline@2"
+        },
+        {
+          "command": "chromiumide.deviceManagement.connectToDeviceForShell",
+          "when": "view == devices && viewItem =~ /^device-/",
+          "group": "1_connect@3"
+        },
+        {
+          "command": "chromiumide.deviceManagement.flashPrebuiltImage",
+          "when": "view == devices && viewItem =~ /^device-/",
+          "group": "inline@3"
+        },
+        {
+          "command": "chromiumide.deviceManagement.flashPrebuiltImage",
+          "when": "view == devices && viewItem =~ /^device-/",
+          "group": "2_operation@1"
+        },
+        {
+          "command": "chromiumide.deviceManagement.openSystemLogViewer",
+          "when": "view == devices && viewItem =~ /^device-/",
+          "group": "inline@4"
+        },
+        {
+          "command": "chromiumide.deviceManagement.openSystemLogViewer",
+          "when": "view == devices && viewItem =~ /^device-/ && config.chromiumide.underDevelopment.systemLogViewer",
+          "group": "2_operation@2"
+        },
+        {
+          "command": "chromiumide.deviceManagement.copyHostname",
+          "when": "view == devices && viewItem =~ /^device-/",
+          "group": "8_copy"
+        },
+        {
+          "command": "chromiumide.deviceManagement.deleteDevice",
+          "when": "view == devices && viewItem == device-owned",
+          "group": "inline@9"
+        },
+        {
+          "command": "chromiumide.deviceManagement.deleteDevice",
+          "when": "view == devices && viewItem == device-owned",
+          "group": "9_delete"
+        },
+        {
+          "command": "chromiumide.deviceManagement.addLease",
+          "when": "view == devices && viewItem == category-leased",
+          "group": "inline@1"
+        },
+        {
+          "command": "chromiumide.deviceManagement.abandonLease",
+          "when": "view == devices && viewItem == device-leased",
+          "group": "inline@9"
+        },
+        {
+          "command": "chromiumide.deviceManagement.abandonLease",
+          "when": "view == devices && viewItem == device-leased",
+          "group": "9_delete"
+        },
+        {
+          "command": "chromiumide.deviceManagement.refreshLeases",
+          "when": "view == devices && viewItem == category-leased",
+          "group": "inline@2"
+        },
+        {
+          "command": "chromiumide.coverage.generate",
+          "when": "view == boards-and-packages && viewItem =~ /<package>/ && config.chromiumide.testCoverage.enabled",
+          "group": "5_coverage"
+        },
+        {
+          "command": "chromiumide.chromium.outputDirectories.editArgs",
+          "when": "view == chromiumide.chromium.outputDirectories"
+        },
+        {
+          "command": "chromiumide.chromium.outputDirectories.setCurrentLink",
+          "when": "view == chromiumide.chromium.outputDirectories && viewItem =~ /type:directory/"
+        },
+        {
+          "command": "chromiumide.chromium.outputDirectories.viewArgsGnError",
+          "when": "view == chromiumide.chromium.outputDirectories && viewItem =~ /type:directory/ && viewItem =~ /gnArgsStatus:error/"
+        },
+        {
+          "command": "chromiumide.chromium.outputDirectories.viewArgsGnWarnings",
+          "when": "view == chromiumide.chromium.outputDirectories && viewItem =~ /type:directory/ && viewItem =~ /gnArgsHasWarnings/"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "chromiumide.boardsAndPackages.build",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.boardsAndPackages.crosWorkonStart",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.boardsAndPackages.crosWorkonStop",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.boardsAndPackages.favoriteAdd",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.boardsAndPackages.favoriteDelete",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.boardsAndPackages.openEbuild",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.boardsAndPackages.setDefaultBoard",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.codeSearchOpen",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.chromium.outputDirectories.editArgs",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.chromium.outputDirectories.setCurrentLink",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.chromium.outputDirectories.viewArgsGnError",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.chromium.outputDirectories.viewArgsGnWarnings",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.chromium.outputDirectories.refresh",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.cppxrefs.forceGenerate",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.deviceManagement.copyHostname",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.gerrit.discardDraft",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.gerrit.editDraft",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.gerrit.editDraftCancel",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.gerrit.editDraftReply",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.gerrit.editDraftReplyAndResolve",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.gerrit.editDraftReplyAndUnresolve",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.gerrit.reply",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.gerrit.replyAndResolve",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.gerrit.replyAndUnresolve",
+          "when": "false"
+        },
+        {
+          "command": "chromiumide.relatedFiles.create",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ChromiumIDE",
+      "properties": {
+        "chromiumide.board": {
+          "type": "string",
+          "description": "The board to use for generating C++ cross references and autocompletion"
+        },
+        "chromiumide.boardsAndPackages.favoriteCategories": {
+          "type": "array",
+          "description": "List of favorite portage package categories",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "chromeos-base"
+          ]
+        },
+        "chromiumide.boardsAndPackages.favoritePackages": {
+          "type": "array",
+          "description": "List of favorite portage packages (e.g. chromeos-base/codelab)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "chromiumide.boilerplate.enabled": {
+          "type": "boolean",
+          "description": "Insert file boilerplate when creating new files. Only works in supported projects (Chromium & ChromiumOS).",
+          "default": true
+        },
+        "chromiumide.boilerplate.guessNamespace": {
+          "type": "boolean",
+          "description": "Guess the namespace based on other files in the same folder when inserting boilerplate (currently only works for Chromium).",
+          "default": false
+        },
+        "chromiumide.chrome.ashBuildDir": {
+          "type": "string",
+          "description": "Build directory for ash-chrome build.",
+          "default": "out/Default"
+        },
+        "chromiumide.chrome.dutBoard": {
+          "type": "string",
+          "description": "Type of board for the DUT",
+          "default": "nocturne"
+        },
+        "chromiumide.chrome.dutName": {
+          "type": "string",
+          "description": "Name to use for SSH to DUT for deploy chrome",
+          "default": "DUT"
+        },
+        "chromiumide.chrome.outputDirectories": {
+          "type": "boolean",
+          "description": "Enable view for Chromium output directories in the Explorer sidebar",
+          "default": true
+        },
+        "chromiumide.chrome.gtest.enabled": {
+          "type": "boolean",
+          "description": "Enable Chromium gtest runner in the Testing sidebar",
+          "default": true
+        },
+        "chromiumide.chrome.gtest.botMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Control whether tests should be run in parallel and be retried once on failure. This uses the `--test-launcher-bot-mode` flag."
+        },
+        "chromiumide.codeSearch": {
+          "type": "string",
+          "enum": [
+            "public",
+            "internal",
+            "gitiles"
+          ],
+          "description": "Code Search instance to open files in",
+          "default": "public"
+        },
+        "chromiumide.codeSearchHash": {
+          "type": "boolean",
+          "description": "Link to the hash of the current revision instead of TOT",
+          "default": false
+        },
+        "chromiumide.crosFormat.enabled": {
+          "type": "boolean",
+          "description": "Format files with 'cros format'",
+          "default": true
+        },
+        "chromiumide.ebuildSupport.enabled": {
+          "type": "boolean",
+          "description": "Enable features for ChromeOS EBuilds",
+          "default": false
+        },
+        "chromiumide.gerrit.enabled": {
+          "type": "boolean",
+          "markdownDescription": "Enable Gerrit comments.",
+          "default": true
+        },
+        "chromiumide.hints.tooLargeWorkspace": {
+          "type": "boolean",
+          "description": "Warn if very large directory is used as workspace folder",
+          "default": true
+        },
+        "chromiumide.ownersFiles.links": {
+          "type": "boolean",
+          "description": "Make references to other OWNERS files clickable.",
+          "default": true
+        },
+        "chromiumide.platformEC.board": {
+          "type": "string",
+          "description": "EC target, for example, bloonchipper."
+        },
+        "chromiumide.platformEC.mode": {
+          "type": "string",
+          "enum": [
+            "RW",
+            "RO"
+          ],
+          "description": "Firmware mode.",
+          "default": "RW"
+        },
+        "chromiumide.platformEC.build": {
+          "type": "string",
+          "enum": [
+            "Makefile",
+            "Zephyr"
+          ],
+          "description": "Build system.",
+          "default": "Makefile"
+        },
+        "chromiumide.spellchecker": {
+          "type": "boolean",
+          "description": "Enable Tricium spellchecker. Requires a reload to take effect.",
+          "default": true
+        },
+        "chromiumide.tast.enabled": {
+          "type": "boolean",
+          "description": "Enable Tast Support",
+          "default": true
+        },
+        "chromiumide.tast.extraArgs": {
+          "type": "array",
+          "description": "Extra args given to tast run, e.g. -var=foo=bar.",
+          "default": []
+        },
+        "chromiumide.tast.showGoAlternateToolsChangedMessage": {
+          "type": "boolean",
+          "description": "Show the information when the settings of go.alternateTools.dlv was changed to use device-compatible debugger",
+          "default": true
+        },
+        "chromiumide.testCoverage.enabled": {
+          "type": "boolean",
+          "markdownDescription": "Show Code Coverage ([go/chromiumide-doc-boards-pkgs#code-coverage](http://go/chromiumide-doc-boards-pkgs#code-coverage)). Requires a reload to take effect.",
+          "default": true
+        },
+        "chromiumide.underDevelopment.autoninjaImprovements": {
+          "type": "boolean",
+          "description": "Show custom progressbar when running autoninja, which helps improve compile times when using remote VSCode.",
+          "default": true
+        },
+        "chromiumide.underDevelopment.buildAndDeploy": {
+          "type": "boolean",
+          "description": "Enable build + deploy features under development",
+          "default": false
+        },
+        "chromiumide.underDevelopment.chromiumBuild": {
+          "type": "boolean",
+          "description": "Enable build + deploy for chromium code (incomplete)",
+          "default": false
+        },
+        "chromiumide.underDevelopment.platform2GtestDebugging": {
+          "type": "boolean",
+          "description": "Enable platform2 gtest debugging support",
+          "default": true
+        },
+        "chromiumide.underDevelopment.platformEC": {
+          "type": "boolean",
+          "description": "Enable Platform EC support (under development)",
+          "default": false
+        },
+        "chromiumide.underDevelopment.relatedFiles": {
+          "type": "boolean",
+          "description": "Enable buttons at the top of each C++ file to create/open related files, such as test and header files (under development, and Chromium-only for now)",
+          "default": false
+        },
+        "chromiumide.underDevelopment.systemLogViewer": {
+          "type": "boolean",
+          "description": "Enable system log viewer",
+          "default": true
+        },
+        "chromiumide.underDevelopment.tastDebugging": {
+          "type": "boolean",
+          "description": "Enable tast tests debugging",
+          "default": true
+        },
+        "chromiumide.deviceManagement.devices": {
+          "type": "array",
+          "scope": "machine-overridable",
+          "description": "List of developer-owned device hostnames",
+          "items": {
+            "type": "string"
+          }
+        },
+        "chromiumide.metrics.collectMetrics": {
+          "type": "boolean",
+          "description": "Enable pseudonymous metrics collection. Randomly generated unique user ID resets automatically every 180 days. You can also reset it anytime by running the command in the Command Palette.",
+          "default": false
+        },
+        "chromiumide.metrics.showMessage": {
+          "type": "boolean",
+          "description": "Show information on metrics collection.",
+          "default": true
+        },
+        "chromiumide.paths.depotTools": {
+          "type": "string",
+          "markdownDescription": "Path to depot tools. By default we search for depot tools in the `$PATH` and then in `~/depot_tools`. When set, the path specified here will be searched first. Use it to point ChromiumIDE to commands such as `cipd`."
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "shellscript",
+        "extensions": [
+          ".eclass"
+        ],
+        "filenames": [
+          "make.defaults"
+        ]
+      },
+      {
+        "id": "gn",
+        "extensions": [
+          ".gn",
+          ".gni"
+        ]
+      },
+      {
+        "id": "upstart",
+        "aliases": [
+          "Upstart"
+        ],
+        "filenamePatterns": [
+          "**/init/*.conf",
+          "**/upstart/*.conf"
+        ],
+        "configuration": "./languages/upstart-language-configuration.json"
+      },
+      {
+        "comment": "https://chromium.googlesource.com/chromiumos/platform/ec/+/HEAD/docs/ide-support.md#odd-file-types",
+        "id": "c",
+        "filenames": [
+          "gpio.wrap",
+          "gpio.inc"
+        ],
+        "extensions": [
+          ".tasklist",
+          ".irqlist",
+          ".mocklist",
+          ".testlist"
+        ]
+      },
+      {
+        "comment": "https://chromium.googlesource.com/chromiumos/platform/ec/+/HEAD/docs/ide-support.md#odd-file-types",
+        "id": "makefile",
+        "filenames": [
+          "Makefile.rules",
+          "Makefile.toolchain"
+        ]
+      },
+      {
+        "id": "portage",
+        "aliases": [
+          "Portage Config"
+        ],
+        "filenames": [
+          "package.accept_keywords",
+          "package.force",
+          "package.keywords",
+          "package.mask",
+          "package.provided",
+          "package.unmask",
+          "package.use",
+          "package.use.force",
+          "package.use.mask"
+        ],
+        "configuration": "./languages/portage-language-configuration.json"
+      },
+      {
+        "id": "seccomp",
+        "aliases": [
+          "Seccomp Policy"
+        ],
+        "extensions": [
+          ".policy"
+        ]
+      },
+      {
+        "id": "sepolicy",
+        "aliases": [
+          "SELinux policy"
+        ],
+        "extensions": [
+          ".te"
+        ]
+      },
+      {
+        "id": "starlark",
+        "aliases": [
+          "Starlark"
+        ],
+        "extensions": [
+          ".bzl",
+          ".star"
+        ],
+        "filenames": [
+          "BUILD",
+          "BUILD.bazel",
+          "WORKSPACE"
+        ]
+      },
+      {
+        "id": "xml",
+        "filenamePatterns": [
+          "org.chromium.*.conf"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "upstart",
+        "scopeName": "source.upstart",
+        "path": "./languages/upstart.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.shellscript": "shellscript"
+        }
+      },
+      {
+        "language": "portage",
+        "scopeName": "source.portage",
+        "path": "./languages/portage.tmLanguage.json"
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "platform-ec-host-test",
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "Test target to run"
+          }
+        },
+        "when": "config.chromiumide.underDevelopment.platformEC"
+      }
+    ],
+    "problemMatchers": [
+      {
+        "name": "platform-ec-host-unittest",
+        "label": "Host unit tests in Platform EC",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": [
+          {
+            "regexp": "(test/[^:]*):([0-9]+): (.*)",
+            "file": 1,
+            "location": 2,
+            "message": 3
+          }
+        ]
+      },
+      {
+        "owner": "tast",
+        "name": "prep-tast-debugger",
+        "label": "prep debugger",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}/src/platform"
+        ],
+        "pattern": {
+          "regexp": "(../platform/[^:]+):(\\d+):(\\d+):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": ".*Waiting for debugger on port.*"
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "build": "wireit",
+    "build-release": "wireit",
+    "build-tests": "wireit",
+    "build-all": "wireit",
+    "check": "wireit",
+    "test": "wireit",
+    "unit-test": "wireit",
+    "integration-test": "wireit",
+    "e2e-test": "wireit",
+    "lint": "wireit",
+    "lint-code": "wireit",
+    "lint-license": "wireit",
+    "fix": "wireit",
+    "preupload": "wireit",
+    "vscode:prepublish": "wireit"
+  },
+  "wireit": {
+    "build": {
+      "command": "ts-node --swc tools/build.ts -p tools",
+      "output": [
+        "dist"
+      ]
+    },
+    "build-release": {
+      "command": "ts-node tools/build.ts -p tools",
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "output": [
+        "dist"
+      ]
+    },
+    "build-tests": {
+      "command": "ts-node --swc tools/build.ts -p tools",
+      "env": {
+        "NODE_ENV": "test"
+      },
+      "output": [
+        "out"
+      ]
+    },
+    "build-all": {
+      "dependencies": [
+        "build",
+        "build-tests"
+      ]
+    },
+    "check": {
+      "dependencies": [
+        "check-root",
+        "check-views",
+        "check-tools"
+      ]
+    },
+    "check-root": {
+      "command": "tsc -p . --noEmit",
+      "output": []
+    },
+    "check-views": {
+      "command": "tsc -p views --noEmit",
+      "output": []
+    },
+    "check-tools": {
+      "command": "tsc -p tools --noEmit",
+      "output": []
+    },
+    "lint": {
+      "dependencies": [
+        "lint-code",
+        "lint-license"
+      ]
+    },
+    "lint-code": {
+      "command": "gts lint",
+      "output": []
+    },
+    "fix": {
+      "command": "gts fix"
+    },
+    "lint-license": {
+      "command": "jsgl --local .",
+      "output": []
+    },
+    "test": {
+      "dependencies": [
+        "unit-test",
+        "integration-test"
+      ]
+    },
+    "unit-test": {
+      "command": "NODE_OPTIONS=$NODE_OPTIONS' -r source-map-support/register' jasmine --config=src/test/unit/jasmine.json --color",
+      "env": {
+        "NODE_PATH": "out/test/unit/injected_modules"
+      },
+      "dependencies": [
+        "build-tests"
+      ]
+    },
+    "e2e-test": {
+      "command": "sudo true && NODE_OPTIONS=$NODE_OPTIONS' -r source-map-support/register' jasmine --config=src/test/e2e/jasmine.json --color",
+      "env": {
+        "NODE_PATH": "out/test/unit/injected_modules"
+      },
+      "dependencies": [
+        "build-tests"
+      ]
+    },
+    "integration-test": {
+      "command": "xvfb-run -a node ./out/test/integration/runTest.js",
+      "dependencies": [
+        "build-all"
+      ],
+      "output": [
+        ".vscode-test/user-data"
+      ]
+    },
+    "preupload": {
+      "dependencies": [
+        "check",
+        "lint",
+        "test"
+      ]
+    },
+    "vscode:prepublish": {
+      "dependencies": [
+        "build-release"
+      ]
+    }
+  },
+  "dependencies": {
+    "@mui/icons-material": "^5.10.9",
+    "@mui/material": "^5.10.9",
+    "@novnc/novnc": "^1.3.0",
+    "date-fns": "^2.28.0",
+    "glob": "^7.1.7",
+    "js-base64": "^3.7.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-virtuoso": "^4.0.3",
+    "semver": "^7.3.7",
+    "source-map-support": "^0.5.21",
+    "ssh-config": "^4.1.6",
+    "tree-kill": "^1.2.2",
+    "uuid": "^8.3.2",
+    "ws": "^8.6.0"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.3.69",
+    "@types/glob": "^7.1.4",
+    "@types/jasmine": "^4.0.0",
+    "@types/mock-fs": "^4.13.1",
+    "@types/node": "16.x",
+    "@types/react": "^18.0.21",
+    "@types/react-dom": "^18.0.6",
+    "@types/semver": "^7.3.9",
+    "@types/source-map-support": "^0.5.6",
+    "@types/ssh2": "^0.5.52",
+    "@types/uuid": "^8.3.4",
+    "@types/vscode": "^1.75.1",
+    "@types/vscode-webview": "^1.57.0",
+    "@types/ws": "^8.5.3",
+    "@typescript-eslint/eslint-plugin": "^5.59.1",
+    "@typescript-eslint/parser": "^5.59.1",
+    "@vscode/codicons": "^0.0.32",
+    "@vscode/test-electron": "^2.3.3",
+    "@vscode/vsce": "^2.19.0",
+    "copy-webpack-plugin": "^10.2.4",
+    "dedent": "^1.5.1",
+    "esbuild": "^0.18.4",
+    "eslint": "^8.45.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "git-revision-webpack-plugin": "^5.0.0",
+    "gts": "^4.0.1",
+    "jasmine": "^4.1.0",
+    "js-green-licenses": "^4.0.0",
+    "mock-fs": "^5.2.0",
+    "ovsx": "^0.8.2",
+    "ssh2": "^1.10.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4",
+    "vscode-tmgrammar-test": "^0.1.1",
+    "vscode-uri": "^3.0.3",
+    "webpack": "^5.71.0",
+    "wireit": "^0.10.0"
+  }
+}

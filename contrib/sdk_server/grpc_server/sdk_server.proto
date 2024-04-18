@@ -1,0 +1,167 @@
+syntax = "proto3";
+package cros_sdk;
+import "chromite/api/sysroot.proto";
+import "chromite/api/sdk.proto";
+import "chromite/api/image.proto";
+import "chromite/api/api.proto";
+import "chromiumos/common.proto";
+
+service sdk_server_service {
+  rpc cros_workon_start(WorkonStartRequest) returns (WorkonStartResponse);
+  rpc cros_workon_stop(WorkonStopRequest) returns (WorkonStopResponse);
+  rpc cros_workon_list(WorkonListRequest) returns (WorkonListResponse);
+  rpc cros_workon_info(WorkonInfoRequest) returns (WorkonInfoResponse);
+  rpc all_packages(AllPackagesRequest) returns (AllPackagesResponse);
+  rpc repo_sync(RepoSyncRequest) returns (stream RepoSyncResponse);
+  rpc repo_status(RepoStatusRequest) returns (RepoStatusResponse);
+  rpc update_chroot(UpdateChrootRequest) returns (stream UpdateChrootResponse);
+  rpc build_packages(BuildPackagesRequest)
+      returns (stream BuildPackagesResponse);
+  rpc create_sdk(CreateSdkRequest) returns (stream CreateSdkResponse);
+  rpc delete_sdk(DeleteSdkRequest) returns (stream DeleteSdkResponse);
+  rpc replace_sdk(ReplaceSdkRequest) returns (stream ReplaceSdkResponse);
+  rpc build_image(BuildImageRequest) returns (stream BuildImageResponse);
+  rpc query_boards(QueryBoardsRequest) returns (QueryBoardsResponse);
+  rpc current_boards(CurrentBoardsRequest) returns (CurrentBoardsResponse);
+  rpc get_logs(LogsRequest) returns (LogsResponse);
+  rpc chroot_info(ChrootInfoRequest) returns (ChrootInfoResponse);
+  rpc clear_logs(ClearLogsRequest) returns (ClearLogsResponse);
+  rpc get_methods(MethodsRequest) returns (MethodsResponse);
+  rpc custom_endpoint(CustomRequest) returns (stream CustomResponse);
+}
+
+message CustomRequest {
+  string endpoint = 1;
+  string request = 2;
+}
+
+message CustomResponse {
+  string logging_info = 1;
+  string response = 2;
+}
+
+message MethodsRequest {}
+message MethodsResponse { chromite.api.MethodGetResponse response = 1; }
+
+message ClearLogsRequest {}
+message ClearLogsResponse {
+  uint32 bytes_cleared = 1;
+  uint32 new_size = 2;
+}
+
+message ChrootInfoRequest {}
+message ChrootInfoResponse {
+  bool ready = 1;
+  string date_created = 2;
+  chromite.api.ChrootVersion version = 3;
+  bool valid_version = 4;
+  chromiumos.Path path = 5;
+}
+
+message LogsRequest {}
+message LogsResponse { repeated LogMessage logs = 1; }
+
+message LogMessage {
+  string command = 1;
+  string time = 2;
+  string logs = 3;
+}
+
+message CurrentBoardsRequest {}
+message CurrentBoardsResponse { repeated BoardImages board_images = 1; }
+
+message BoardImages {
+  chromiumos.BuildTarget build_target = 1;
+  repeated chromite.api.Image images = 2;
+  chromite.api.Image latest = 3;
+}
+
+message QueryBoardsRequest {}
+message QueryBoardsResponse {
+  repeated chromiumos.BuildTarget build_target = 1;
+}
+
+message BuildImageRequest { chromite.api.CreateImageRequest request = 1; }
+message BuildImageResponse {
+  chromite.api.CreateImageResult response = 1;
+  string logging_info = 2;
+}
+
+message DeleteSdkRequest { chromite.api.DeleteRequest request = 1; }
+
+message DeleteSdkResponse {
+  chromite.api.DeleteResponse response = 1;
+  string logging_info = 2;
+}
+
+message ReplaceSdkRequest { chromite.api.CreateRequest request = 1; }
+
+message ReplaceSdkResponse {
+  chromite.api.CreateResponse response = 1;
+  string logging_info = 2;
+}
+
+message CreateSdkRequest { chromite.api.CreateRequest request = 1; }
+
+message CreateSdkResponse {
+  chromite.api.CreateResponse response = 1;
+  string logging_info = 2;
+}
+
+message BuildPackagesRequest {
+  chromite.api.SysrootCreateRequest create_req = 1;
+  chromite.api.InstallToolchainRequest toolchain_req = 2;
+  chromite.api.InstallPackagesRequest packages_req = 3;
+}
+
+message BuildPackagesResponse {
+  chromite.api.SysrootCreateResponse create_resp = 1;
+  chromite.api.InstallToolchainResponse toolchain_resp = 2;
+  chromite.api.InstallPackagesResponse packages_resp = 3;
+  string logging_info = 4;
+}
+
+message UpdateChrootRequest { chromite.api.UpdateRequest request = 1; }
+message UpdateChrootResponse {
+  chromite.api.UpdateResponse response = 1;
+  string logging_info = 2;
+}
+
+message RepoSyncRequest {}
+message RepoSyncResponse { string logging_info = 1; }
+
+message RepoStatusRequest {}
+message RepoStatusResponse { repeated string info = 1; }
+
+message AllPackagesRequest { chromiumos.BuildTarget build_target = 1; }
+message AllPackagesResponse {
+  repeated chromiumos.PackageInfo package_info = 1;
+}
+
+message WorkonStartRequest {
+  chromiumos.BuildTarget build_target = 1;
+  chromiumos.PackageInfo package_info = 2;
+}
+
+message WorkonStartResponse { string info = 1; }
+
+message WorkonStopRequest {
+  chromiumos.BuildTarget build_target = 1;
+  chromiumos.PackageInfo package_info = 2;
+}
+
+message WorkonStopResponse { string info = 1; }
+
+message WorkonListRequest {
+  chromiumos.BuildTarget build_target = 1;
+  chromiumos.PackageInfo package_info = 2;
+}
+
+message WorkonListResponse { repeated chromiumos.PackageInfo package_info = 1; }
+
+message WorkonInfoRequest {
+  chromiumos.BuildTarget build_target = 1;
+  chromiumos.PackageInfo package_info = 2;
+}
+
+message WorkonInfoResponse { string info = 1; }

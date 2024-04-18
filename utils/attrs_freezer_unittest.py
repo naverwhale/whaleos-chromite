@@ -1,4 +1,4 @@
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -9,68 +9,73 @@ from chromite.utils import attrs_freezer
 
 
 class FrozenAttributesTest(cros_test_lib.TestCase):
-  """Tests FrozenAttributesMixin functionality."""
+    """Tests FrozenAttributesMixin functionality."""
 
-  class DummyClass(object):
-    """Any class that does not override __setattr__."""
+    class StubClass:
+        """Any class that does not override __setattr__."""
 
-  class SetattrClass(object):
-    """Class that does override __setattr__."""
-    SETATTR_OFFSET = 10
-    def __setattr__(self, attr, value):
-      """Adjust value here to later confirm that this code ran."""
-      object.__setattr__(self, attr, self.SETATTR_OFFSET + value)
+    class SetattrClass:
+        """Class that does override __setattr__."""
 
-  def _TestBasics(self, cls):
-    # pylint: disable=attribute-defined-outside-init
-    def _Expected(val):
-      return getattr(cls, 'SETATTR_OFFSET', 0) + val
+        SETATTR_OFFSET = 10
 
-    obj = cls()
-    obj.a = 1
-    obj.b = 2
-    self.assertEqual(_Expected(1), obj.a)
-    self.assertEqual(_Expected(2), obj.b)
+        def __setattr__(self, attr, value):
+            """Adjust value here to later confirm that this code ran."""
+            object.__setattr__(self, attr, self.SETATTR_OFFSET + value)
 
-    obj.Freeze()
-    self.assertRaises(attrs_freezer.Error, setattr, obj, 'a', 3)
-    self.assertEqual(_Expected(1), obj.a)
+    def _TestBasics(self, cls):
+        # pylint: disable=attribute-defined-outside-init
+        def _Expected(val):
+            return getattr(cls, "SETATTR_OFFSET", 0) + val
 
-    self.assertRaises(attrs_freezer.Error, setattr, obj, 'c', 3)
-    self.assertFalse(hasattr(obj, 'c'))
+        obj = cls()
+        obj.a = 1
+        obj.b = 2
+        self.assertEqual(_Expected(1), obj.a)
+        self.assertEqual(_Expected(2), obj.b)
 
-  def testFrozenByMetaclass(self):
-    """Test attribute freezing with FrozenAttributesClass."""
-    class DummyByMeta(self.DummyClass, metaclass=attrs_freezer.Class):
-      """Class that freezes DummyClass using metaclass construct."""
+        obj.Freeze()
+        self.assertRaises(attrs_freezer.Error, setattr, obj, "a", 3)
+        self.assertEqual(_Expected(1), obj.a)
 
-    self._TestBasics(DummyByMeta)
+        self.assertRaises(attrs_freezer.Error, setattr, obj, "c", 3)
+        self.assertFalse(hasattr(obj, "c"))
 
-    class SetattrByMeta(self.SetattrClass, metaclass=attrs_freezer.Class):
-      """Class that freezes SetattrClass using metaclass construct."""
+    def testFrozenByMetaclass(self):
+        """Test attribute freezing with FrozenAttributesClass."""
 
-    self._TestBasics(SetattrByMeta)
+        class StubByMeta(self.StubClass, metaclass=attrs_freezer.Class):
+            """Class that freezes StubClass using metaclass construct."""
 
-  def testFrozenByMixinFirst(self):
-    """Test attribute freezing with Mixin first in hierarchy."""
-    class Dummy(attrs_freezer.Mixin, self.DummyClass):
-      """Class that freezes DummyClass using mixin construct."""
+        self._TestBasics(StubByMeta)
 
-    self._TestBasics(Dummy)
+        class SetattrByMeta(self.SetattrClass, metaclass=attrs_freezer.Class):
+            """Class that freezes SetattrClass using metaclass construct."""
 
-    class Setattr(attrs_freezer.Mixin, self.SetattrClass):
-      """Class that freezes SetattrClass using mixin construct."""
+        self._TestBasics(SetattrByMeta)
 
-    self._TestBasics(Setattr)
+    def testFrozenByMixinFirst(self):
+        """Test attribute freezing with Mixin first in hierarchy."""
 
-  def testFrozenByMixinLast(self):
-    """Test attribute freezing with Mixin last in hierarchy."""
-    class Dummy(self.DummyClass, attrs_freezer.Mixin):
-      """Class that freezes DummyClass using mixin construct."""
+        class Stub(attrs_freezer.Mixin, self.StubClass):
+            """Class that freezes StubClass using mixin construct."""
 
-    self._TestBasics(Dummy)
+        self._TestBasics(Stub)
 
-    class Setattr(self.SetattrClass, attrs_freezer.Mixin):
-      """Class that freezes SetattrClass using mixin construct."""
+        class Setattr(attrs_freezer.Mixin, self.SetattrClass):
+            """Class that freezes SetattrClass using mixin construct."""
 
-    self._TestBasics(Setattr)
+        self._TestBasics(Setattr)
+
+    def testFrozenByMixinLast(self):
+        """Test attribute freezing with Mixin last in hierarchy."""
+
+        class Stub(self.StubClass, attrs_freezer.Mixin):
+            """Class that freezes StubClass using mixin construct."""
+
+        self._TestBasics(Stub)
+
+        class Setattr(self.SetattrClass, attrs_freezer.Mixin):
+            """Class that freezes SetattrClass using mixin construct."""
+
+        self._TestBasics(Setattr)

@@ -1,6 +1,6 @@
 #!/bin/bash
 ##############################################################################
-# Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 ##############################################################################
@@ -79,47 +79,52 @@ TimeStamp() {
   local end_var="${section}end_seconds"
 
   case ${action} in
-  begin)
-    # Get time(date) for display and calc.
-    eval ${start_var}=$(date '+%s')
+    begin)
+      # Get time(date) for display and calc.
+      eval ${start_var}=$(date '+%s')
 
-    # Print BEGIN message for $PROG.
-    echo "BEGIN ${section} on ${HOSTNAME%%.*} $(date)"
-    [[ ${section} == "run" ]] && echo
-    ;;
-  end|done)
-    # Check for "START" values before calcing.
-    if [[ -z ${!start_var} ]]; then
-      #display_time="EE:EE:EE - 'end' run without 'begin' in this scope or sourced script using TimeStamp"
-      return 1
-    fi
+      # Print BEGIN message for $PROG.
+      echo "BEGIN ${section} on ${HOSTNAME%%.*} $(date)"
+      [[ ${section} == "run" ]] && echo
+      ;;
+    end | done)
+      # Check for "START" values before calcing.
+      if [[ -z ${!start_var} ]]; then
+        #display_time="EE:EE:EE - 'end' run without 'begin' in this scope or sourced script using TimeStamp"
+        return 1
+      fi
 
-    # Get time(date) for display and calc.
-    eval ${end_var}=$(date '+%s')
+      # Get time(date) for display and calc.
+      eval ${end_var}=$(date '+%s')
 
-    local elapsed=$(( ${!end_var} - ${!start_var} ))
-    local d=$(( elapsed / 86400 ))
-    local h=$(( (elapsed % 86400) / 3600 ))
-    local m=$(( (elapsed % 3600) / 60 ))
-    local s=$(( elapsed % 60 ))
-    [ "$d" -gt 0 ] && local prettyd="${d}d"
-    [ "$h" -gt 0 ] && local prettyh="${h}h"
-    [ "$m" -gt 0 ] && local prettym="${m}m"
-    [ "$s" -gt 0 ] && local prettys="${s}s"
-    local pretty="$prettyd$prettyh$prettym$prettys"
+      local elapsed=$((${!end_var} - ${!start_var}))
+      local d=$((elapsed / 86400))
+      local h=$(((elapsed % 86400) / 3600))
+      local m=$(((elapsed % 3600) / 60))
+      local s=$((elapsed % 60))
+      [ "$d" -gt 0 ] && local prettyd="${d}d"
+      [ "$h" -gt 0 ] && local prettyh="${h}h"
+      [ "$m" -gt 0 ] && local prettym="${m}m"
+      [ "$s" -gt 0 ] && local prettys="${s}s"
+      local pretty="$prettyd$prettyh$prettym$prettys"
 
-    [[ ${section} == "run" ]] && echo
-    echo "${PROG}: DONE ${section} on ${HOSTNAME%%.*} $(date) in ${pretty}"
+      [[ ${section} == "run" ]] && echo
+      echo "${PROG}: DONE ${section} on ${HOSTNAME%%.*} $(date) in ${pretty}"
 
-    # NULL these local vars now that we've displayed things.
-    unset ${start_var} ${end_var}
-    ;;
+      # NULL these local vars now that we've displayed things.
+      unset ${start_var} ${end_var}
+      ;;
   esac
 }
 
 TrapClean() {
-  # If user ^C's at read then tty is hosed, so make it sane again.
-  stty sane
+  # If user ^C's at read then tty is hosed, so make it reasonable again.
+  # Options taken from https://man7.org/linux/man-pages/man1/stty.1.html
+  stty cread -ignbrk brkint -inlcr -igncr icrnl icanon \
+    iexten echo echoe echok -echonl -noflsh -ixoff -iutf8 \
+    -iuclc -ixany imaxbel -xcase -olcuc -ocrnl opost -ofill \
+    onlcr -onocr -onlret nl0 cr0 tab0 bs0 vt0 ff0 isig -tostop \
+    -ofdel -echoprt echoctl echoke -extproc -flusho
   echo
   echo
   echo "^C caught!"
@@ -135,13 +140,13 @@ CleanExit() {
   else
     if [[ -n ${CLEANEXIT_RM} ]]; then
       echo "Cleaning up: ${CLEANEXIT_RM}"
-   else
+    else
       : echo "Cleaning up..."
-   fi
-      # cd somewhere relatively safe and run cleanup the $CLEANEXIT_RM stack
-      # + some usual suspects...
-      cd /tmp && rm -rf ${CLEANEXIT_RM} ${TMPFILE1} ${TMPFILE2} ${TMPFILE3} \
-                                        ${TMPDIR1}  ${TMPDIR2}  ${TMPDIR3}
+    fi
+    # cd somewhere relatively safe and run cleanup the $CLEANEXIT_RM stack
+    # + some usual suspects...
+    cd /tmp && rm -rf ${CLEANEXIT_RM} ${TMPFILE1} ${TMPFILE2} ${TMPFILE3} \
+      ${TMPDIR1} ${TMPDIR2} ${TMPDIR3}
   fi
   # Display end timestamp when an existing TimeStamp begin was run.
   [[ -n ${runstart_seconds} ]] && TimeStamp end
@@ -174,7 +179,7 @@ DumpRunTimeEnv() {
 FindGSUTIL() {
   local lf
   for lf in ${CROSTOOLS_GSUTIL} /b/build/third_party/gsutil/gsutil \
-            /home/chromeos-re/gsutil/gsutil gsutil; do
+    /home/chromeos-re/gsutil/gsutil gsutil; do
     type -P ${lf} && return 0
   done
   return 1
@@ -186,41 +191,41 @@ ManHelp() {
   local lprog=$0
   local ltmpfile="/tmp/${PROG}-manhelp.$$"
 
-  [[ ${usage}    == "yes" ]] && set -- -usage
-  [[ ${man}      == "yes" ]] && set -- -man
+  [[ ${usage} == "yes" ]] && set -- -usage
+  [[ ${man} == "yes" ]] && set -- -man
   [[ ${comments} == "yes" ]] && set -- -comments
 
   case $1 in
-  # Standard usage function
-  -usage|--usage|"-?")
-    (
-    echo 'cat << EOFCAT'
-    echo "Usage:"
-    sed -n '/#+ SYNOPSIS/,/^#+ DESCRIPTION/p' "${lprog}" | \
-      sed -e 's,^#+ ,,g' -e 's,^#+$,,g' -e '/^DESCRIPTION/d'
-    echo 'EOFCAT'
-    ) > "${ltmpfile}"
-    . "${ltmpfile}"
-    rm -f "${ltmpfile}"
-    exit 1
-    ;;
-  # Standard man function
-  -man|--man|-h|-help|--help)
-    (
-    echo 'cat << EOFCAT'
-    grep "^#+" "${lprog}" | cut -c4-
-    echo 'EOFCAT'
-    ) > "${ltmpfile}"
-    . "${ltmpfile}" | ${PAGE:-"less"}
-    rm -f "${ltmpfile}"
-    exit 1
-    ;;
-  # Standard comments function
-  -comments)
-    echo
-    egrep "^#\-" "${lprog}" | sed -e 's,^#- *,,g'
-    exit 1
-    ;;
+    # Standard usage function
+    -usage | --usage | "-?")
+      (
+        echo 'cat << EOFCAT'
+        echo "Usage:"
+        sed -n '/#+ SYNOPSIS/,/^#+ DESCRIPTION/p' "${lprog}" \
+          | sed -e 's,^#+ ,,g' -e 's,^#+$,,g' -e '/^DESCRIPTION/d'
+        echo 'EOFCAT'
+      ) >"${ltmpfile}"
+      . "${ltmpfile}"
+      rm -f "${ltmpfile}"
+      exit 1
+      ;;
+    # Standard man function
+    -man | --man | -h | -help | --help)
+      (
+        echo 'cat << EOFCAT'
+        grep "^#+" "${lprog}" | cut -c4-
+        echo 'EOFCAT'
+      ) >"${ltmpfile}"
+      . "${ltmpfile}" | ${PAGE:-"less"}
+      rm -f "${ltmpfile}"
+      exit 1
+      ;;
+    # Standard comments function
+    -comments)
+      echo
+      egrep "^#\-" "${lprog}" | sed -e 's,^#- *,,g'
+      exit 1
+      ;;
   esac
 }
 
@@ -229,17 +234,18 @@ namevalue() {
   local arg namex valuex
   for arg in "$@"; do
     case $arg in
-    *=*) # Strip off any leading -*
-         arg=$(echo $arg |sed 's,^-*,,g')
-         # "set" any arguments that have = in them
-         namex=${arg%%=*}
-         # change -'s to _ for legal vars in bash
-         namex=${namex//-/_}
-         valuex=${arg#*=}
-         eval export $namex=\""$valuex"\"
-         ;;
-      *) LOOSEARGS="$LOOSEARGS $arg"
-         ;;
+      *=*) # Strip off any leading -*
+        arg=$(echo $arg | sed 's,^-*,,g')
+        # "set" any arguments that have = in them
+        namex=${arg%%=*}
+        # change -'s to _ for legal vars in bash
+        namex=${namex//-/_}
+        valuex=${arg#*=}
+        eval export $namex=\""$valuex"\"
+        ;;
+      *)
+        LOOSEARGS="$LOOSEARGS $arg"
+        ;;
     esac
   done
 }

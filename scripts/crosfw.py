@@ -1,4 +1,4 @@
-# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+# Copyright 2013 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -20,20 +20,17 @@ The script is normally run from within the U-Boot directory which is
 
 Example 1: Build upstream image for coreboot and write to a 'link':
 
- crosfw -b link
+ crosfw link
 
-Example 2: Build verified boot image (V) for daisy/snow and boot in secure
- mode (S) so that breaking in on boot is not possible.
+Example 2: Build verified boot image (V) for daisy/snow.
 
- crosfw -b daisy -VS
- crosfw -b daisy -VSC         (no console output)
+ crosfw daisy -V
 
-Example 3: Build a magic flasher (F) with full verified boot for peach_pit,
- but with console enabled, write to SD card (x)
+You can force a reconfigure with -f and a full distclean with -F.
 
- crosfw -b peach_pit -VSFx
+To increase verbosity use the -v and --debug options.
 
-This sript does not use an ebuild. It does a similar thing to the
+This script does not use an ebuild. It does a similar thing to the
 chromeos-u-boot ebuild, and runs cros_bundle_firmware to produce various
 types of image, a little like the chromeos-bootimage ebuild.
 
@@ -43,7 +40,7 @@ device tree files or lots of USE flags and complexity in the ebuilds.
 
 This script has been tested with snow, link and peach_pit. It builds for
 peach_pit by default. Note that it will also build any upstream ARM
-board - e.g. "-b snapper9260" will build an image for that board.
+board - e.g. "snapper9260" will build an image for that board.
 
 Mostly you can use the script inside and outside the chroot. The main
 limitation is that dut-control doesn't really work outside the chroot,
@@ -89,22 +86,22 @@ For the -a option here are some useful options:
 --verify --full-erase
 --bootcmd "cros_test sha"
 --gbb-flags -force-dev-switch-on
---bmpblk ~/trunk/src/third_party/u-boot/bmp.bin
+--bmpblk ~/chromiumos/src/third_party/u-boot/bmp.bin
 
 For example: -a "--gbb-flags -force-dev-switch-on"
 
 Note the standard bmpblk is at:
-  /home/$USER/trunk/src/third_party/chromiumos-overlay/sys-boot/
-      chromeos-bootimage/files/bmpblk.bin"
+  ~/chromiumos/src/third_party/chromiumos-overlay/sys-boot/
+      chromeos-bootimage/files/bmpblk.bin
 """
 
 import glob
 import logging
-import multiprocessing
 import os
-import re
+from pathlib import Path
 import subprocess
 import sys
+from typing import Any, Dict, List
 
 from chromite.lib import commandline
 from chromite.lib import constants
@@ -117,600 +114,458 @@ arch = None
 board = None
 compiler = None
 default_board = None
-family = None
 in_chroot = True
+outdir = ""
 
-logging.basicConfig(format='%(message)s')
-kwargs = {'print_cmd': False, 'check': False,
-          'debug_level': logging.getLogger().getEffectiveLevel()}
-
-outdir = ''
-
- # If you have multiple boards connected on different servo ports, put lines
+# If you have multiple boards connected on different servo ports, put lines
 # like 'SERVO_PORT{"peach_pit"} = 7777' in your ~/.crosfwrc
 SERVO_PORT = {}
 
-smdk = None
-src_root = os.path.join(constants.SOURCE_ROOT, 'src')
+src_root = os.path.join(constants.SOURCE_ROOT, "src")
 in_chroot = cros_build_lib.IsInsideChroot()
 
-uboard = ''
+uboard = ""
 
-default_board = 'peach_pit'
+default_board = "peach_pit"
 use_ccache = False
-vendor = None
-verbose = False
 
 # Special cases for the U-Boot board config, the SOCs and default device tree
 # since the naming is not always consistent.
 # x86 has a lot of boards, but to U-Boot they are all the same
 UBOARDS = {
-    'daisy': 'smdk5250',
-    'peach': 'smdk5420',
+    "daisy": "smdk5250",
+    "peach": "smdk5420",
 }
-for b in ['alex', 'butterfly', 'emeraldlake2', 'link', 'lumpy', 'parrot',
-          'stout', 'stumpy']:
-  UBOARDS[b] = 'coreboot-x86'
-  UBOARDS['chromeos_%s' % b] = 'chromeos_coreboot'
+for b in [
+    "alex",
+    "butterfly",
+    "emeraldlake2",
+    "link",
+    "lumpy",
+    "parrot",
+    "stout",
+    "stumpy",
+]:
+    UBOARDS[b] = "coreboot-x86"
+    UBOARDS["chromeos_%s" % b] = "chromeos_coreboot"
 
-SOCS = {
-    'coreboot-x86': '',
-    'chromeos_coreboot': '',
-    'daisy': 'exynos5250-',
-    'peach': 'exynos5420-',
-}
+OUT_DIR = "/tmp/crosfw"
 
-DEFAULT_DTS = {
-    'daisy': 'snow',
-    'daisy_spring': 'spring',
-    'peach_pit': 'peach-pit',
-}
-
-OUT_DIR = '/tmp/crosfw'
-
-rc_file = os.path.expanduser('~/.crosfwrc')
+rc_file = os.path.expanduser("~/.crosfwrc")
 if os.path.exists(rc_file):
-  with open(rc_file) as fp:
-    # pylint: disable=exec-used
-    exec(compile(fp.read(), rc_file, 'exec'))
+    with open(rc_file, "rb") as fp:
+        # pylint: disable=exec-used
+        exec(compile(fp.read(), rc_file, "exec"))
 
 
-def Log(msg):
-  """Print out a message if we are in verbose mode.
+def run(cmd: List[str], **kwargs: Dict[Any, Any]):
+    """Run a command with the common settings.
 
-  Args:
-    msg: Message to print
-  """
-  if verbose:
-    logging.info(msg)
+    Args:
+        cmd: Command + arguments to run.
+        **kwargs: keyword arguments to pass on to cros_build_lib.run().
+
+    Returns:
+        A CompletedProcess object.
+    """
+    kwargs.setdefault("print_cmd", False)
+    kwargs.setdefault("check", False)
+    kwargs.setdefault("encoding", "utf-8")
+    return cros_build_lib.run(cmd, **kwargs)
 
 
 def Dumper(flag, infile, outfile):
-  """Run objdump on an input file.
+    """Run objdump on an input file.
 
-  Args:
-    flag: Flag to pass objdump (e.g. '-d').
-    infile: Input file to process.
-    outfile: Output file to write to.
-  """
-  result = cros_build_lib.run(
-      [CompilerTool('objdump'), flag, infile],
-      stdout=outfile, **kwargs)
-  if result.returncode:
-    sys.exit()
+    Args:
+        flag: Flag to pass objdump (e.g. '-d').
+        infile: Input file to process.
+        outfile: Output file to write to.
+    """
+    result = run([CompilerTool("objdump"), flag, infile], stdout=outfile)
+    if result.returncode:
+        sys.exit()
 
 
 def CompilerTool(tool):
-  """Returns the cross-compiler tool filename.
+    """Returns the cross-compiler tool filename.
 
-  Args:
-    tool: Tool name to return, e.g. 'size'.
+    Args:
+        tool: Tool name to return, e.g. 'size'.
 
-  Returns:
-    Filename of requested tool.
-  """
-  return '%s%s' % (compiler, tool)
+    Returns:
+        Filename of requested tool.
+    """
+    return "%s%s" % (compiler, tool)
 
 
 def ParseCmdline(argv):
-  """Parse all command line options.
+    """Parse all command line options.
 
-  Args:
-    argv: Arguments to parse.
+    Args:
+        argv: Arguments to parse.
 
-  Returns:
-    The parsed options object
-  """
-  parser = commandline.ArgumentParser(description=__doc__)
-  parser.add_argument('-a', '--cbfargs', action='append',
-                      help='Pass extra arguments to cros_bundle_firmware')
-  parser.add_argument('-b', '--board', type=str, default=default_board,
-                      help='Select board to build (daisy/peach_pit/link)')
-  parser.add_argument('-B', '--build', action='store_false', default=True,
-                      help="Don't build U-Boot, just configure device tree")
-  parser.add_argument('-C', '--console', action='store_false', default=True,
-                      help='Permit console output')
-  parser.add_argument('-d', '--dt', default='seaboard',
-                      help='Select name of device tree file to use')
-  parser.add_argument('-D', '--nodefaults', dest='use_defaults',
-                      action='store_false', default=True,
-                      help="Don't select default filenames for those not given")
-  parser.add_argument('-F', '--flash', action='store_true', default=False,
-                      help='Create magic flasher for SPI flash')
-  parser.add_argument('-M', '--mmc', action='store_true', default=False,
-                      help='Create magic flasher for eMMC')
-  parser.add_argument('-i', '--incremental', action='store_true', default=False,
-                      help="Don't reconfigure and clean")
-  parser.add_argument('-k', '--kernel', action='store_true', default=False,
-                      help='Send kernel to board also')
-  parser.add_argument('-O', '--objdump', action='store_true', default=False,
-                      help='Write disassembly output')
-  parser.add_argument('-r', '--run', action='store_false', default=True,
-                      help='Run the boot command')
-  parser.add_argument('--ro', action='store_true', default=False,
-                      help='Create Chrome OS read-only image')
-  parser.add_argument('--rw', action='store_true', default=False,
-                      help='Create Chrome OS read-write image')
-  parser.add_argument('-s', '--separate', action='store_false', default=True,
-                      help='Link device tree into U-Boot, instead of separate')
-  parser.add_argument('-S', '--secure', action='store_true', default=False,
-                      help='Use vboot_twostop secure boot')
-  parser.add_argument('--small', action='store_true', default=False,
-                      help='Create Chrome OS small image')
-  parser.add_argument('-t', '--trace', action='store_true', default=False,
-                      help='Enable trace support')
-  parser.add_argument('-V', '--verified', action='store_true', default=False,
-                      help='Include Chrome OS verified boot components')
-  parser.add_argument('-w', '--write', action='store_false', default=True,
-                      help="Don't write image to board using usb/em100")
-  parser.add_argument('-x', '--sdcard', action='store_true', default=False,
-                      help='Write to SD card instead of USB/em100')
-  parser.add_argument('-z', '--size', action='store_true', default=False,
-                      help='Display U-Boot image size')
-  parser.add_argument('target', nargs='?', default='all',
-                      help='The target to work on')
-  return parser.parse_args(argv)
-
-
-def FindCompiler(gcc, cros_prefix):
-  """Look up the compiler for an architecture.
-
-  Args:
-    gcc: GCC architecture, either 'arm' or 'aarch64'
-    cros_prefix: Full Chromium OS toolchain prefix
-  """
-  if in_chroot:
-    # Use the Chromium OS toolchain.
-    prefix = cros_prefix
-  else:
-    prefix = glob.glob('/opt/linaro/gcc-linaro-%s-linux-*/bin/*gcc' % gcc)
-    if not prefix:
-      cros_build_lib.Die("""Please install an %s toolchain for your machine.
-Install a Linaro toolchain from:
-https://launchpad.net/linaro-toolchain-binaries
-or see cros/commands/cros_chrome_sdk.py.""" % gcc)
-    prefix = re.sub('gcc$', '', prefix[0])
-  return prefix
+    Returns:
+        The parsed options object
+    """
+    parser = commandline.ArgumentParser(
+        description=__doc__, default_log_level="notice"
+    )
+    parser.add_argument(
+        "-B",
+        "--build",
+        action="store_false",
+        default=True,
+        help="Don't build U-Boot, just configure device tree",
+    )
+    parser.add_argument(
+        "--dt",
+        help="Select name of device tree file to use",
+    )
+    parser.add_argument(
+        "--dtb",
+        type="file_exists",
+        help="Select a binary .dtb, passed to the U-Boot build using EXT_DTB",
+    )
+    parser.add_argument(
+        "-f",
+        "--force-reconfig",
+        action="store_true",
+        default=False,
+        help="Reconfigure before building",
+    )
+    parser.add_argument(
+        "-F",
+        "--force-distclean",
+        action="store_true",
+        default=False,
+        help="Run distclean and reconfigure before building",
+    )
+    parser.add_argument(
+        "-j",
+        "--jobs",
+        type=int,
+        default=os.cpu_count(),
+        help="Select the number of CPUs to use (defaults to all)",
+    )
+    parser.add_argument(
+        "-I",
+        "--in-tree",
+        action="store_true",
+        default=False,
+        help="Build in-tree",
+    )
+    parser.add_argument(
+        "-L",
+        "--no-lto",
+        dest="lto",
+        action="store_false",
+        default=True,
+        help="Disable Link-time Optimisation (LTO) when building",
+    )
+    parser.add_argument(
+        "-O",
+        "--objdump",
+        action="store_true",
+        default=False,
+        help="Write disassembly output",
+    )
+    parser.add_argument(
+        "-t",
+        "--trace",
+        action="store_true",
+        default=False,
+        help="Enable trace support",
+    )
+    parser.add_argument(
+        "-T",
+        "--target",
+        nargs="?",
+        default="all",
+        help="Select target to build",
+    )
+    parser.add_argument(
+        "-V",
+        "--verified",
+        action="store_true",
+        default=False,
+        help="Include Chrome OS verified boot components",
+    )
+    parser.add_argument(
+        "-z",
+        "--size",
+        action="store_true",
+        default=False,
+        help="Display U-Boot image size",
+    )
+    parser.add_argument(
+        "board",
+        type=str,
+        default=default_board,
+        help="Select board to build (daisy/peach_pit/link)",
+    )
+    return parser.parse_args(argv)
 
 
 def SetupBuild(options):
-  """Set up parameters needed for the build.
+    """Set up parameters needed for the build.
 
-  This checks the current environment and options and sets up various things
-  needed for the build, including 'base' which holds the base flags for
-  passing to the U-Boot Makefile.
+    This checks the current environment and options and sets up various things
+    needed for the build, including 'base' which holds the base flags for
+    passing to the U-Boot Makefile.
 
-  Args:
-    options: Command line options
+    Args:
+        options: Command line options
 
-  Returns:
-    Base flags to use for U-Boot, as a list.
-  """
-  # pylint: disable=global-statement
-  global arch, board, compiler, family, outdir, smdk, uboard, vendor, verbose
+    Returns:
+        Base flags to use for U-Boot, as a list.
+    """
+    # pylint: disable=global-statement
+    global arch, board, compiler, outdir, uboard
 
-  if not verbose:
-    verbose = options.verbose != 0
+    logging.info("Building for %s", options.board)
 
-  logging.getLogger().setLevel(options.verbose)
-
-  Log('Building for %s' % options.board)
-
-  # Separate out board_variant string: "peach_pit" becomes "peach", "pit".
-  # But don't mess up upstream boards which use _ in their name.
-  parts = options.board.split('_')
-  if parts[0] in ['daisy', 'peach']:
-    board = parts[0]
-  else:
-    board = options.board
-
-  # To allow this to be run from 'cros_sdk'
-  if in_chroot:
-    os.chdir(os.path.join(src_root, 'third_party', 'u-boot', 'files'))
-
-  base_board = board
-
-  if options.verified:
-    base_board = 'chromeos_%s' % base_board
-
-  uboard = UBOARDS.get(base_board, base_board)
-  Log('U-Boot board is %s' % uboard)
-
-  # Pull out some information from the U-Boot boards config file
-  family = None
-  (PRE_KBUILD, PRE_KCONFIG, KCONFIG) = range(3)
-  if os.path.exists('MAINTAINERS'):
-    board_format = PRE_KBUILD
-  else:
-    board_format = PRE_KCONFIG
-  with open('boards.cfg') as f:
-    for line in f:
-      if 'genboardscfg' in line:
-        board_format = KCONFIG
-      if uboard in line:
-        if line[0] == '#':
-          continue
-        fields = line.split()
-        if not fields:
-          continue
-        arch = fields[1]
-        fields += [None, None, None]
-        if board_format == PRE_KBUILD:
-          smdk = fields[3]
-          vendor = fields[4]
-          family = fields[5]
-          target = fields[6]
-        elif board_format in (PRE_KCONFIG, KCONFIG):
-          smdk = fields[5]
-          vendor = fields[4]
-          family = fields[3]
-          target = fields[0]
-
-        # Make sure this is the right target.
-        if target == uboard:
-          break
-  if not arch:
-    cros_build_lib.Die("Selected board '%s' not found in boards.cfg." % board)
-
-  vboot = os.path.join('build', board, 'usr')
-  if arch == 'x86':
-    family = 'em100'
-    if in_chroot:
-      compiler = 'i686-pc-linux-gnu-'
+    # Separate out board_variant string: "peach_pit" becomes "peach", "pit".
+    # But don't mess up upstream boards which use _ in their name.
+    parts = options.board.split("_")
+    if parts[0] in ["daisy", "peach"]:
+        board = parts[0]
     else:
-      compiler = '/opt/i686/bin/i686-unknown-elf-'
-  elif arch == 'arm':
-    compiler = FindCompiler(arch, 'armv7a-cros-linux-gnueabi-')
-  elif arch == 'aarch64':
-    compiler = FindCompiler(arch, 'aarch64-cros-linux-gnu-')
-    # U-Boot builds both arm and aarch64 with the 'arm' architecture.
-    arch = 'arm'
-  elif arch == 'sandbox':
-    compiler = ''
-  else:
-    cros_build_lib.Die("Selected arch '%s' not supported." % arch)
+        board = options.board
 
-  if not options.build:
-    options.incremental = True
+    # To allow this to be run from 'cros_sdk'
+    if in_chroot:
+        os.chdir(os.path.join(src_root, "third_party", "u-boot", "files"))
 
-  cpus = multiprocessing.cpu_count()
+    base_board = board
 
-  outdir = os.path.join(OUT_DIR, uboard)
-  base = [
-      'make',
-      '-j%d' % cpus,
-      'O=%s' % outdir,
-      'ARCH=%s' % arch,
-      'CROSS_COMPILE=%s' % compiler,
-      '--no-print-directory',
-      'HOSTSTRIP=true',
-      'DEV_TREE_SRC=%s-%s' % (family, options.dt),
-      'QEMU_ARCH=']
+    if options.verified:
+        base_board = "chromeos_%s" % base_board
 
-  if options.verbose < 2:
-    base.append('-s')
-  elif options.verbose > 2:
-    base.append('V=1')
+    uboard = UBOARDS.get(base_board, base_board)
+    logging.info("U-Boot board is %s", uboard)
 
-  if options.ro and options.rw:
-    cros_build_lib.Die('Cannot specify both --ro and --rw options')
-  if options.ro:
-    base.append('CROS_RO=1')
-    options.small = True
+    # Pull out some information from the U-Boot boards config file
+    (PRE_KBUILD, PRE_KCONFIG, KCONFIG) = range(3)
+    if os.path.exists("MAINTAINERS"):
+        board_format = PRE_KBUILD
+    else:
+        board_format = PRE_KCONFIG
 
-  if options.rw:
-    base.append('CROS_RW=1')
-    options.small = True
+    # Create the boards.cfg file if missing.
+    if not os.path.exists("boards.cfg"):
+        run(["buildman", "-R", "boards.cfg"])
 
-  if options.small:
-    base.append('CROS_SMALL=1')
-  else:
-    base.append('CROS_FULL=1')
+    with open("boards.cfg", encoding="utf-8") as f:
+        for line in f:
+            if "genboardscfg" in line:
+                board_format = KCONFIG
+            if uboard in line:
+                if line[0] == "#":
+                    continue
+                fields = line.split()
+                if not fields:
+                    continue
+                target = fields[6]
+                # Make sure this is the right target.
+                if target != uboard:
+                    continue
+                arch = fields[1]
+                fields += [None, None, None]
+                if board_format in (PRE_KCONFIG, KCONFIG):
+                    target = fields[0]
+    if not arch:
+        cros_build_lib.Die(
+            "Selected board '%s' not found in boards.cfg." % board
+        )
 
-  if options.verified:
-    base += [
-        'VBOOT=%s' % vboot,
-        'MAKEFLAGS_VBOOT=DEBUG=1',
-        'QUIET=1',
-        'CFLAGS_EXTRA_VBOOT=-DUNROLL_LOOPS',
-        'VBOOT_SOURCE=%s/platform/vboot_reference' % src_root]
-    base.append('VBOOT_DEBUG=1')
+    vboot = os.path.join("build", board, "usr")
+    if arch == "sandbox":
+        compiler = ""
+    elif in_chroot:
+        if arch == "x86":
+            compiler = "i686-cros-linux-gnu-"
+        elif arch == "arm":
+            compiler = "armv7a-cros-linux-gnueabihf-"
+        elif arch == "aarch64":
+            compiler = "aarch64-cros-linux-gnu-"
+    else:
+        result = run(
+            ["buildman", "-A", "--boards", options.board],
+            capture_output=True,
+        )
+        compiler = result.stdout.strip()
+        if not compiler:
+            cros_build_lib.Die("Selected arch '%s' not supported.", arch)
 
-  # Handle the Chrome OS USE_STDINT workaround. Vboot needs <stdint.h> due
-  # to a recent change, the need for which I didn't fully understand. But
-  # U-Boot doesn't normally use this. We have added an option to U-Boot to
-  # enable use of <stdint.h> and without it vboot will fail to build. So we
-  # need to enable it where ww can. We can't just enable it always since
-  # that would prevent this script from building other non-Chrome OS boards
-  # with a different (older) toolchain, or Chrome OS boards without vboot.
-  # So use USE_STDINT if the toolchain supports it, and not if not. This
-  # file was originally part of glibc but has recently migrated to the
-  # compiler so it is reasonable to use it with a stand-alone program like
-  # U-Boot. At this point the comment has got long enough that we may as
-  # well include some poetry which seems to be sorely lacking the code base,
-  # so this is from Ogden Nash:
-  #    To keep your marriage brimming
-  #    With love in the loving cup,
-  #    Whenever you're wrong, admit it;
-  #    Whenever you're right, shut up.
-  cmd = [CompilerTool('gcc'), '-ffreestanding', '-x', 'c', '-c', '-']
-  result = cros_build_lib.run(cmd,
-                              input='#include <stdint.h>',
-                              capture_output=True,
-                              **kwargs)
-  if result.returncode == 0:
-    base.append('USE_STDINT=1')
+    base = [
+        "make",
+        "-j%d" % options.jobs,
+        "CROSS_COMPILE=%s" % compiler,
+        "--no-print-directory",
+        "HOSTSTRIP=true",
+        "QEMU_ARCH=",
+        "KCONFIG_NOSILENTUPDATE=1",
+    ]
+    if options.dt:
+        base.append(f"DEVICE_TREE={options.dt}")
+    if not options.in_tree:
+        outdir = os.path.join(OUT_DIR, uboard)
+        base.append(f"O={outdir}")
+    if not options.lto:
+        base.append("NO_LTO=1")
+    if options.dtb:
+        base.append(f"EXT_DTB={options.dtb}")
 
-  base.append('BUILD_ROM=1')
-  if options.trace:
-    base.append('FTRACE=1')
-  if options.separate:
-    base.append('DEV_TREE_SEPARATE=1')
+    # Enable quiet output at INFO level, everything at DEBUG level
+    if logging.getLogger().getEffectiveLevel() <= logging.DEBUG:
+        base.append("V=1")
+    elif logging.getLogger().getEffectiveLevel() >= logging.NOTICE:
+        base.append("-s")
 
-  if options.incremental:
-    # Get the correct board for cros_write_firmware
-    config_mk = '%s/include/autoconf.mk' % outdir
-    if not os.path.exists(config_mk):
-      logging.warning('No build found for %s - dropping -i', board)
-      options.incremental = False
+    if options.verified:
+        base += [
+            "VBOOT=%s" % vboot,
+            "MAKEFLAGS_VBOOT=DEBUG=1",
+            "QUIET=1",
+            "CFLAGS_EXTRA_VBOOT=-DUNROLL_LOOPS",
+            "VBOOT_SOURCE=%s/platform/vboot_reference" % src_root,
+        ]
+        base.append("VBOOT_DEBUG=1")
 
-  config_mk = 'include/autoconf.mk'
-  if os.path.exists(config_mk):
-    logging.warning("Warning: '%s' exists, try 'make distclean'", config_mk)
+    base.append("BUILD_ROM=1")
+    if options.trace:
+        base.append("FTRACE=1")
 
-  # For when U-Boot supports ccache
-  # See http://patchwork.ozlabs.org/patch/245079/
-  if use_ccache:
-    os.environ['CCACHE'] = 'ccache'
+    if not options.force_reconfig:
+        config_mk = "%s/include/autoconf.mk" % outdir
+        if not os.path.exists(config_mk):
+            logging.warning("No build found for %s - adding -f", board)
+            options.force_reconfig = True
 
-  return base
+    config_mk = "include/autoconf.mk"
+    if os.path.exists(config_mk):
+        logging.warning("Warning: '%s' exists, try 'make mrproper'", config_mk)
+
+    return base
+
+
+def CheckConfigChange() -> bool:
+    """See if we need to reconfigure due to config files changing
+
+    Checks if any defconfig or Kconfig file has changed in the source tree
+    since the last time U-Boot was configured for this build. For simplicity,
+    any defconfig change will trigger this, not just one for the board being
+    built, since the cost of a reconfigure is fairly small.
+
+    Returns:
+        True if any config file has changed since U-Boot was last configured
+    """
+    fname = os.path.join(outdir, ".config")
+    ref_time = os.path.getctime(fname)
+    for p in Path.cwd().glob("configs/*"):
+        if p.stat().st_ctime > ref_time:
+            logging.warning("config/ dir has changed - adding -f")
+            return True
+
+    for p in Path.cwd().glob("**/Kconfig*"):
+        if p.stat().st_ctime > ref_time:
+            logging.warning("Kconfig file(s) changed - adding -f")
+            return True
+
+    return False
 
 
 def RunBuild(options, base, target, queue):
-  """Run the U-Boot build.
+    """Run the U-Boot build.
 
-  Args:
-    options: Command line options.
-    base: Base U-Boot flags.
-    target: Target to build.
-    queue: A parallel queue to add jobs to.
-  """
-  Log('U-Boot build flags: %s' % ' '.join(base))
+    Args:
+        options: Command line options.
+        base: Base U-Boot flags.
+        target: Target to build.
+        queue: A parallel queue to add jobs to.
+    """
+    logging.info("U-Boot build flags: %s", " ".join(base))
 
-  # Reconfigure U-Boot.
-  if not options.incremental:
-    # Ignore any error from this, some older U-Boots fail on this.
-    cros_build_lib.run(base + ['distclean'], **kwargs)
-    if os.path.exists('tools/genboardscfg.py'):
-      mtarget = 'defconfig'
-    else:
-      mtarget = 'config'
-    cmd = base + ['%s_%s' % (uboard, mtarget)]
-    result = cros_build_lib.run(cmd, capture_output=True,
-                                stderr=subprocess.STDOUT, **kwargs)
-    if result.returncode:
-      print("cmd: '%s', output: '%s'" % (result.cmdstr, result.output))
-      sys.exit(result.returncode)
+    if options.force_distclean:
+        options.force_reconfig = True
+        # Ignore any error from this, some older U-Boots fail on this.
+        run(base + ["distclean"], capture_output=True)
 
-  # Do the actual build.
-  if options.build:
-    result = cros_build_lib.run(base + [target], capture_output=True,
-                                stderr=subprocess.STDOUT, **kwargs)
-    if result.returncode:
-      # The build failed, so output the results to stderr.
-      print("cmd: '%s', output: '%s'" % (result.cmdstr, result.output),
-            file=sys.stderr)
-      sys.exit(result.returncode)
+    if not options.force_reconfig:
+        options.force_reconfig = CheckConfigChange()
 
-  files = ['%s/u-boot' % outdir]
-  spl = glob.glob('%s/spl/u-boot-spl' % outdir)
-  if spl:
-    files += spl
-  if options.size:
-    result = cros_build_lib.run([CompilerTool('size')] + files, **kwargs)
-    if result.returncode:
-      sys.exit()
+    # Reconfigure U-Boot.
+    if options.force_reconfig:
+        if os.path.exists("tools/genboardscfg.py"):
+            mtarget = "defconfig"
+        else:
+            mtarget = "config"
+        cmd = base + ["%s_%s" % (uboard, mtarget)]
+        result = run(cmd, stdout=True, stderr=subprocess.STDOUT)
+        if (
+            result.returncode
+            or logging.getLogger().getEffectiveLevel() <= logging.DEBUG
+        ):
+            print(f"cmd: {result.cmdstr}")
+            print(result.stdout, file=sys.stderr)
+            if result.returncode:
+                sys.exit(result.returncode)
 
-  # Create disassembly files .dis and .Dis (full dump)
-  for f in files:
-    base = os.path.splitext(f)[0]
-    if options.objdump:
-      queue.put(('-d', f, base + '.dis'))
-      queue.put(('-D', f, base + '.Dis'))
-    else:
-      # Remove old files which otherwise might be confusing
-      osutils.SafeUnlink(base + '.dis')
-      osutils.SafeUnlink(base + '.Dis')
+    # Do the actual build.
+    if options.build:
+        result = run(base + [target], input="", capture_output=True)
+        if (
+            result.returncode
+            or logging.getLogger().getEffectiveLevel() <= logging.INFO
+            or result.stderr
+        ):
+            # The build failed, so output the results to stderr.
+            print(f"cmd: {result.cmdstr}", file=sys.stderr)
+            print(result.stderr, file=sys.stderr)
 
-  Log('Output directory %s' % outdir)
+            # Note that stdout and stderr are separated here, so warnings
+            # associated with a file will appear separately from any output
+            # from the build system
+            if logging.getLogger().getEffectiveLevel() <= logging.INFO:
+                print(result.stdout)
+            if result.returncode:
+                sys.exit(result.returncode)
 
+    files = ["%s/u-boot" % outdir]
+    spl = glob.glob("%s/spl/u-boot-spl" % outdir)
+    if spl:
+        files += spl
+    if options.size:
+        result = run([CompilerTool("size")] + files)
+        if result.returncode:
+            sys.exit()
 
-def WriteFirmware(options):
-  """Write firmware to the board.
+    # Create disassembly files .dis and .Dis (full dump)
+    for f in files:
+        base = os.path.splitext(f)[0]
+        if options.objdump:
+            queue.put(("-d", f, base + ".dis"))
+            queue.put(("-D", f, base + ".Dis"))
+        else:
+            # Remove old files which otherwise might be confusing
+            osutils.SafeUnlink(base + ".dis")
+            osutils.SafeUnlink(base + ".Dis")
 
-  This uses cros_bundle_firmware to create a firmware image and write it to
-  the board.
-
-  Args:
-    options: Command line options
-  """
-  flash = []
-  kernel = []
-  run = []
-  secure = []
-  servo = []
-  silent = []
-  verbose_arg = []
-  ro_uboot = []
-
-  bl2 = ['--bl2', '%s/spl/%s-spl.bin' % (outdir, smdk)]
-
-  if options.use_defaults:
-    bl1 = []
-    bmpblk = []
-    ecro = []
-    ecrw = []
-    defaults = []
-  else:
-    bl1 = ['--bl1', '##/build/%s/firmware/u-boot.bl1.bin' % options.board]
-    bmpblk = ['--bmpblk', '##/build/%s/firmware/bmpblk.bin' % options.board]
-    ecro = ['--ecro', '##/build/%s/firmware/ec.RO.bin' % options.board]
-    ecrw = ['--ec', '##/build/%s/firmware/ec.RW.bin' % options.board]
-    defaults = ['-D']
-
-  if arch == 'x86':
-    seabios = ['--seabios',
-               '##/build/%s/firmware/seabios.cbfs' % options.board]
-  else:
-    seabios = []
-
-  if options.sdcard:
-    dest = 'sd:.'
-  elif arch == 'x86':
-    dest = 'em100'
-  elif arch == 'sandbox':
-    dest = ''
-  else:
-    dest = 'usb'
-
-  port = SERVO_PORT.get(options.board, '')
-  if port:
-    servo = ['--servo', '%d' % port]
-
-  if options.flash:
-    flash = ['-F', 'spi']
-
-    # The small builds don't have the command line interpreter so cannot
-    # run the magic flasher script. So use the standard U-Boot in this
-    # case.
-    if options.small:
-      logging.warning('Using standard U-Boot as flasher')
-      flash += ['-U', '##/build/%s/firmware/u-boot.bin' % options.board]
-
-  if options.mmc:
-    flash = ['-F', 'sdmmc']
-
-  if options.verbose:
-    verbose_arg = ['-v', '%s' % options.verbose]
-
-  if options.secure:
-    secure += ['--bootsecure', '--bootcmd', 'vboot_twostop']
-
-  if not options.verified:
-    # Make a small image, without GBB, etc.
-    secure.append('-s')
-
-  if options.kernel:
-    kernel = ['--kernel', '##/build/%s/boot/vmlinuz' % options.board]
-
-  if not options.console:
-    silent = ['--add-config-int', 'silent-console', '1']
-
-  if not options.run:
-    run = ['--bootcmd', 'none']
-
-  if arch != 'sandbox' and not in_chroot and servo:
-    if dest == 'usb':
-      logging.warning('Image cannot be written to board')
-      dest = ''
-      servo = []
-    elif dest == 'em100':
-      logging.warning('Please reset the board manually to boot firmware')
-      servo = []
-
-    if not servo:
-      logging.warning('(sadly dut-control does not work outside chroot)')
-
-  if dest:
-    dest = ['-w', dest]
-  else:
-    dest = []
-
-  soc = SOCS.get(board)
-  if not soc:
-    soc = SOCS.get(uboard, '')
-  dt_name = DEFAULT_DTS.get(options.board, options.board)
-  dts_file = 'board/%s/dts/%s%s.dts' % (vendor, soc, dt_name)
-  Log('Device tree: %s' % dts_file)
-
-  if arch == 'sandbox':
-    uboot_fname = '%s/u-boot' % outdir
-  else:
-    uboot_fname = '%s/u-boot.bin' % outdir
-
-  if options.ro:
-    # RO U-Boot is passed through as blob 'ro-boot'. We use the standard
-    # ebuild one as RW.
-    # TODO(sjg@chromium.org): Option to build U-Boot a second time to get
-    # a fresh RW U-Boot.
-    logging.warning('Using standard U-Boot for RW')
-    ro_uboot = ['--add-blob', 'ro-boot', uboot_fname]
-    uboot_fname = '##/build/%s/firmware/u-boot.bin' % options.board
-  cbf = ['%s/platform/dev/host/cros_bundle_firmware' % src_root,
-         '-b', options.board,
-         '-d', dts_file,
-         '-I', 'arch/%s/dts' % arch, '-I', 'cros/dts',
-         '-u', uboot_fname,
-         '-O', '%s/out' % outdir,
-         '-M', family]
-
-  for other in [bl1, bl2, bmpblk, defaults, dest, ecro, ecrw, flash, kernel,
-                run, seabios, secure, servo, silent, verbose_arg, ro_uboot]:
-    if other:
-      cbf += other
-  if options.cbfargs:
-    for item in options.cbfargs:
-      cbf += item.split(' ')
-  os.environ['PYTHONPATH'] = ('%s/platform/dev/host/lib:%s/..' %
-                              (src_root, src_root))
-  Log(' '.join(cbf))
-  result = cros_build_lib.run(cbf, **kwargs)
-  if result.returncode:
-    cros_build_lib.Die('cros_bundle_firmware failed')
-
-  if not dest or not result.returncode:
-    logging.info('Image is available at %s/out/image.bin', outdir)
-  else:
-    if result.returncode:
-      cros_build_lib.Die('Failed to write image to board')
-    else:
-      logging.info('Image written to board with %s', ' '.join(dest + servo))
+    logging.info("Output directory %s", outdir)
 
 
 def main(argv):
-  """Main function for script to build/write firmware.
+    """Main function for script to build firmware.
 
-  Args:
-    argv: Program arguments.
-  """
-  options = ParseCmdline(argv)
-  base = SetupBuild(options)
+    Args:
+        argv: Program arguments.
+    """
+    options = ParseCmdline(argv)
+    base = SetupBuild(options)
 
-  with parallel.BackgroundTaskRunner(Dumper) as queue:
-    RunBuild(options, base, options.target, queue)
+    with parallel.BackgroundTaskRunner(Dumper) as queue:
+        RunBuild(options, base, options.target, queue)
 
-    if options.write:
-      WriteFirmware(options)
-
-    if options.objdump:
-      Log('Writing diasssembly files')
+        if options.objdump:
+            logging.info("Writing diasssembly files")

@@ -1,4 +1,4 @@
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -12,46 +12,47 @@ from chromite.lib import cros_test_lib
 
 
 FAKE_BUILD_STATUS = {
-    'id': 1234,
-    'buildbucket_id': 'buildbucket_value',
-    'status': 'pass',
-    'artifacts_url': 'fake_artifacts_url',
-    'toolchain_url': 'fake_toolchain_url',
-    'stages': [
-        {'name': 'stage_a', 'status': 'pass'},
-        {'name': 'stage_b', 'status': 'pass'},
-        {'name': 'stage_c', 'status': 'pass'},
+    "id": 1234,
+    "buildbucket_id": "buildbucket_value",
+    "status": "pass",
+    "artifacts_url": "fake_artifacts_url",
+    "toolchain_url": "fake_toolchain_url",
+    "stages": [
+        {"name": "stage_a", "status": "pass"},
+        {"name": "stage_b", "status": "pass"},
+        {"name": "stage_c", "status": "pass"},
     ],
 }
 
 
 class MockBuildresultCommand(command_unittest.MockCommand):
-  """Mock out the `cros buildresult` command."""
-  TARGET = 'chromite.cli.cros.cros_buildresult.BuildResultCommand'
-  TARGET_CLASS = cros_buildresult.BuildResultCommand
-  COMMAND = 'buildresult'
+    """Mock out the `cros buildresult` command."""
+
+    TARGET = "chromite.cli.cros.cros_buildresult.BuildResultCommand"
+    TARGET_CLASS = cros_buildresult.BuildResultCommand
+    COMMAND = "buildresult"
 
 
 class BuildresultTest(cros_test_lib.MockTestCase):
-  """Base class for buildresult command tests."""
+    """Base class for buildresult command tests."""
 
-  def setUp(self):
-    self.cmd_mock = None
+    def setUp(self):
+        self.cmd_mock = None
 
-  def SetupCommandMock(self, cmd_args):
-    """Sets up the `cros buildresult` command mock."""
-    self.cmd_mock = MockBuildresultCommand(cmd_args)
-    self.StartPatcher(self.cmd_mock)
+    def SetupCommandMock(self, cmd_args):
+        """Sets up the `cros buildresult` command mock."""
+        self.cmd_mock = MockBuildresultCommand(cmd_args)
+        self.StartPatcher(self.cmd_mock)
 
-    return self.cmd_mock.inst.options
+        return self.cmd_mock.inst.options
 
 
 class BuildresultReportTest(BuildresultTest):
-  """Test the report generation functions."""
+    """Test the report generation functions."""
 
-  def testReport(self):
-    result = cros_buildresult.Report([FAKE_BUILD_STATUS])
-    expected = """buildbucket_id: buildbucket_value
+    def testReport(self):
+        result = cros_buildresult.Report([FAKE_BUILD_STATUS])
+        expected = """buildbucket_id: buildbucket_value
 status: pass
 artifacts_url: fake_artifacts_url
 toolchain_url: fake_toolchain_url
@@ -62,22 +63,22 @@ stages:
 
 """
 
-    self.assertEqual(expected, result)
+        self.assertEqual(expected, result)
 
-  def testReportJson(self):
-    result = cros_buildresult.ReportJson([FAKE_BUILD_STATUS])
-    expected = {
-        'buildbucket_value': {
-            'buildbucket_id': 'buildbucket_value',
-            'status': 'pass',
-            'artifacts_url': 'fake_artifacts_url',
-            'toolchain_url': 'fake_toolchain_url',
-            'stages': {
-                'stage_a': 'pass',
-                'stage_b': 'pass',
-                'stage_c': 'pass',
+    def testReportJson(self):
+        result = cros_buildresult.ReportJson([FAKE_BUILD_STATUS])
+        expected = {
+            "buildbucket_value": {
+                "buildbucket_id": "buildbucket_value",
+                "status": "pass",
+                "artifacts_url": "fake_artifacts_url",
+                "toolchain_url": "fake_toolchain_url",
+                "stages": {
+                    "stage_a": "pass",
+                    "stage_b": "pass",
+                    "stage_c": "pass",
+                },
             },
-        },
-    }
+        }
 
-    self.assertEqual(expected, json.loads(result))
+        self.assertEqual(expected, json.loads(result))

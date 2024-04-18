@@ -1,4 +1,4 @@
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -10,33 +10,37 @@ exception if no match can be found.
 """
 
 from chromite.lib import commandline
-from chromite.lib import repo_manifest
 from chromite.lib import repo_util
+from chromite.utils import repo_manifest
 
 
 def get_parser():
-  """Creates the argparse parser.
+    """Creates the argparse parser.
 
-  Returns:
-    commandline.ArgumentParser: The argument parser.
-  """
-  parser = commandline.ArgumentParser(description=__doc__)
-  parser.add_argument('--manifest-file', type='path',
-                      help='File path to a manifest to search.')
-  parser.add_argument('--project', required=True,
-                      help='The project to search for.')
-  parser.add_argument('--branch', default='master',
-                      help='The branch to search for.')
-  return parser
-
+    Returns:
+        commandline.ArgumentParser: The argument parser.
+    """
+    parser = commandline.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--manifest-file",
+        type="path",
+        help="File path to a manifest to search.",
+    )
+    parser.add_argument(
+        "--project", required=True, help="The project to search for."
+    )
+    parser.add_argument(
+        "--branch", default="master", help="The branch to search for."
+    )
+    return parser
 
 
 def main(argv):
-  parser = get_parser()
-  options = parser.parse_args(argv)
-  options.Freeze()
-  if options.manifest_file:
-    manifest = repo_manifest.Manifest.FromFile(options.manifest_file)
-  else:
-    manifest = repo_util.Repository.MustFind(__file__).Manifest()
-  print(manifest.GetUniqueProject(options.project, options.branch).Path())
+    parser = get_parser()
+    options = parser.parse_args(argv)
+    options.Freeze()
+    if options.manifest_file:
+        manifest = repo_manifest.Manifest.FromFile(options.manifest_file)
+    else:
+        manifest = repo_util.Repository.MustFind(__file__).Manifest()
+    print(manifest.GetUniqueProject(options.project, options.branch).Path())

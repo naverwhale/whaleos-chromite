@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -18,7 +18,7 @@ gcertstatus >&/dev/null || gcert
 
 f1-sql \
   -csv_output=1 \
-  << SQLtoHERE
+  <<SQLtoHERE
 -- Note that some data is missing from the chromeos_ci_eng.buildbucket_builds
 -- table. https://crbug.com/1038752 is tracking that issue.
 -- select * from chromeos_ci_eng.buildbucket_builds where id = 8892492747888114240;

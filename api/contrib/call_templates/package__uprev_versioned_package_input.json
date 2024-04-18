@@ -5,8 +5,8 @@
   },
   "versions": [
     {
-      "repository": "/path/to/chrome",
       "ref": "123.456.789.012",
+      "repository": "/path/to/chrome",
       "revision": "abc123"
     }
   ]

@@ -1,4 +1,4 @@
-# Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
+# Copyright 2011 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -283,10 +283,18 @@ complete -F _cros_workon cros_workon
 complete -o bashdefault -o default -F _complete_equery equery
 
 # Use equery completion for equery-$board for known boards
-_boardlist=$(cros_list_overlays | egrep "^.*/overlays/overlay-.*$" |
+_boardlist=$(/mnt/host/source/chromite/bin/cros_list_overlays |
+             egrep "^.*/overlays/overlay-.*$" |
              sed -n "s/.*overlay-//p")
 for board in $_boardlist; do
   complete -o bashdefault -o default -F _complete_equery equery-$board
+done
+
+# Source additional bash completion scripts.
+for f in /mnt/host/source/chromite/sdk/etc/bash_completion.d/*.sh; do
+  if [[ -f "${f}" ]]; then
+    source "$f"
+  fi
 done
 
 ###  Local Variables:

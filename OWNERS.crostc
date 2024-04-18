@@ -1,0 +1,10 @@
+# Copyright 2022 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This owners file is only for use within chromite to grant ownership of:
+#   * Toolchain functions in chromite/lib and chromite/services
+#   * lint_package and related scripts in chromite/scripts
+# to the Chrome OS Toolchains team.
+
+include chromiumos/third_party/toolchain-utils:/OWNERS.toolchain

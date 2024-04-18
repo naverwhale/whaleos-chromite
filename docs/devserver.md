@@ -17,7 +17,7 @@ or can be overridden in `/mnt/stateful_partition/etc/lsb-release`.
 ## Starting the Dev Server
 
 Note: Before you start the dev server, you must have already run
-`build_packages.sh`. If you have not, please run this now.
+`cros build-packages`. If you have not, please run this now.
 
 The first step in using the dev server is starting the web server on your
 development machine:

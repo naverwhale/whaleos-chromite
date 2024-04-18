@@ -1,11 +1,11 @@
 {
   "chroot": {
-		"path": "%(chroot)s"
-	},
-	"sysroot": {
-		"path": "/build/%(build_target)s",
+    "path": "%(chroot)s"
+  },
+  "sysroot": {
     "build_target": {
       "name": "%(build_target)s"
-    }
-	}
+    },
+    "path": "/build/%(build_target)s"
+  }
 }

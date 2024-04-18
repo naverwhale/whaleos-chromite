@@ -1,4 +1,4 @@
-# Copyright 2017 The Chromium OS Authors. All rights reserved.
+# Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -16,87 +16,112 @@ from chromite.scripts import cros_generate_breakpad_symbols
 # Unitests often need access to internals of the thing they test.
 # pylint: disable=protected-access
 
-class AdjustOffsetsTest(cros_test_lib.TestCase):
-  """Test breakpad symbol file offset adjustments."""
 
-  def testFinaExpansionOffset(self):
-    """Make sure we get the correct offset."""
-    output = """
+class AdjustOffsetsTest(cros_test_lib.TestCase):
+    """Test breakpad symbol file offset adjustments."""
+
+    def testFinaExpansionOffset(self):
+        """Make sure we get the correct offset."""
+        output = """
 INFO: Relocations   : RELA
 INFO: Packed           : 9544 bytes
 INFO: Unpacked         : 66888 bytes
 INFO: Relocations      : 2787 entries
 INFO: Expansion     : 57344 bytes
 """
-    cmd_result = cros_build_lib.CommandResult(
-        cmd=None, error=None, output=output, returncode=0)
+        cmd_result = cros_build_lib.CompletedProcess(
+            stderr=None, stdout=output, returncode=0
+        )
 
-    result = cros_generate_android_breakpad_symbols.FindExpansionOffset(
-        cmd_result)
-    self.assertEqual(result, -57344)
+        result = cros_generate_android_breakpad_symbols.FindExpansionOffset(
+            cmd_result
+        )
+        self.assertEqual(result, -57344)
 
-  def testFinaExpansionOffsetNoUnpack(self):
-    """Make sure we get an offset of zero, if the file wasn't unpacked."""
+    def testFinaExpansionOffsetNoUnpack(self):
+        """Make sure we get an offset of zero, if the file wasn't unpacked."""
 
-    cmd_result = cros_build_lib.CommandResult(
-        cmd=None, error=None, output=None, returncode=1)
+        cmd_result = cros_build_lib.CompletedProcess(
+            stderr=None, stdout=None, returncode=1
+        )
 
-    result = cros_generate_android_breakpad_symbols.FindExpansionOffset(
-        cmd_result)
-    self.assertEqual(result, 0)
+        result = cros_generate_android_breakpad_symbols.FindExpansionOffset(
+            cmd_result
+        )
+        self.assertEqual(result, 0)
 
-  def testFinaExpansionOffsetBadOutput(self):
-    """Make sure we get an error without expected output."""
+    def testFinaExpansionOffsetBadOutput(self):
+        """Make sure we get an error without expected output."""
 
-    cmd_result = cros_build_lib.CommandResult(
-        cmd=None, error=None, output='foo', returncode=0)
+        cmd_result = cros_build_lib.CompletedProcess(
+            stderr=None, stdout="foo", returncode=0
+        )
 
-    with self.assertRaises(
-        cros_generate_android_breakpad_symbols.OffsetDiscoveryError):
-      cros_generate_android_breakpad_symbols.FindExpansionOffset(cmd_result)
+        with self.assertRaises(
+            cros_generate_android_breakpad_symbols.OffsetDiscoveryError
+        ):
+            cros_generate_android_breakpad_symbols.FindExpansionOffset(
+                cmd_result
+            )
 
-  def testAdjustLineSymbolOffset(self):
-    """Test _AdjustLineSymbolOffset."""
+    def testAdjustLineSymbolOffset(self):
+        """Test _AdjustLineSymbolOffset."""
 
-    offset = 42
-    line_expected = (
-        ('', ''),
-        ('\n', '\n'),
-        ('noise\n', 'noise\n'),
-        ('MODULE Linux arm64 E3D562057466309CED960047D474EBF00 libssl.so\n',
-         'MODULE Linux arm64 E3D562057466309CED960047D474EBF00 libssl.so\n'),
-        ('FUNC dcfc a8 0 dtls1_discard_fragment_body\n',
-         'FUNC dd26 a8 0 dtls1_discard_fragment_body\n'),
-        ('dd18 c 403 1\n',
-         'dd42 c 403 1\n'),
-        ('PUBLIC f9b0 0 DTLSv1_get_timeout\n',
-         'PUBLIC f9da 0 DTLSv1_get_timeout\n'),
-        ('STACK CFI INIT dcfc a8 .cfa: sp 0 + .ra: x30\n',
-         'STACK CFI INIT dd26 a8 .cfa: sp 0 + .ra: x30\n'),
-        ('STACK CFI dd04 .cfa: x29 336 +\n',
-         'STACK CFI dd2e .cfa: x29 336 +\n'),
-        ('0 c 403 1\n',
-         '0 c 403 1\n'),
-        ('FUNC 0 a8 0 dtls1_discard_fragment_body\n',
-         'FUNC 0 a8 0 dtls1_discard_fragment_body\n'),
-    )
+        offset = 42
+        line_expected = (
+            ("", ""),
+            ("\n", "\n"),
+            ("noise\n", "noise\n"),
+            (
+                "MODULE Linux arm64 "
+                "E3D562057466309CED960047D474EBF00 libssl.so\n",
+                "MODULE Linux arm64 "
+                "E3D562057466309CED960047D474EBF00 libssl.so\n",
+            ),
+            (
+                "FUNC dcfc a8 0 dtls1_discard_fragment_body\n",
+                "FUNC dd26 a8 0 dtls1_discard_fragment_body\n",
+            ),
+            ("dd18 c 403 1\n", "dd42 c 403 1\n"),
+            (
+                "PUBLIC f9b0 0 DTLSv1_get_timeout\n",
+                "PUBLIC f9da 0 DTLSv1_get_timeout\n",
+            ),
+            (
+                "STACK CFI INIT dcfc a8 .cfa: sp 0 + .ra: x30\n",
+                "STACK CFI INIT dd26 a8 .cfa: sp 0 + .ra: x30\n",
+            ),
+            (
+                "STACK CFI dd04 .cfa: x29 336 +\n",
+                "STACK CFI dd2e .cfa: x29 336 +\n",
+            ),
+            ("0 c 403 1\n", "0 c 403 1\n"),
+            (
+                "FUNC 0 a8 0 dtls1_discard_fragment_body\n",
+                "FUNC 0 a8 0 dtls1_discard_fragment_body\n",
+            ),
+        )
 
-    for line, expected in line_expected:
-      result = cros_generate_android_breakpad_symbols._AdjustLineSymbolOffset(
-          line, offset)
-      self.assertEqual(result, expected)
+        for line, expected in line_expected:
+            result = (
+                cros_generate_android_breakpad_symbols._AdjustLineSymbolOffset(
+                    line, offset
+                )
+            )
+            self.assertEqual(result, expected)
 
-  def testAdjustSymbolOffsetEmpty(self):
-    """Test ability to adjust an empty file."""
-    with tempfile.NamedTemporaryFile() as sym_file:
-      osutils.WriteFile(sym_file.name, '')
-      cros_generate_android_breakpad_symbols._AdjustSymbolOffset(
-          sym_file.name, 42)
-      self.assertEqual(osutils.ReadFile(sym_file.name), '')
+    def testAdjustSymbolOffsetEmpty(self):
+        """Test ability to adjust an empty file."""
+        with tempfile.NamedTemporaryFile() as sym_file:
+            osutils.WriteFile(sym_file.name, "")
+            cros_generate_android_breakpad_symbols._AdjustSymbolOffset(
+                sym_file.name, 42
+            )
+            self.assertEqual(osutils.ReadFile(sym_file.name), "")
 
-  def testAdjustSymbolOffset(self):
-    """Test ability to adjust an empty file."""
-    unadjusted = """
+    def testAdjustSymbolOffset(self):
+        """Test ability to adjust an empty file."""
+        unadjusted = """
 MODULE Linux arm64 E3D562057466309CED960047D474EBF00 libssl.so
 FILE 0 /testfile.h
 FILE 1 /usr/testfile.c
@@ -115,7 +140,7 @@ STACK CFI dd00 .cfa: sp 336 + .ra: .cfa -328 + ^ x29: .cfa -336 + ^
 STACK CFI dd04 .cfa: x29 336 +
 STACK CFI dd08 x23: .cfa -288 + ^ x24: .cfa -280 + ^
 """
-    expected = """
+        expected = """
 MODULE Linux arm64 E3D562057466309CED960047D474EBF00 libssl.so
 FILE 0 /testfile.h
 FILE 1 /usr/testfile.c
@@ -134,27 +159,31 @@ STACK CFI dd2a .cfa: sp 336 + .ra: .cfa -328 + ^ x29: .cfa -336 + ^
 STACK CFI dd2e .cfa: x29 336 +
 STACK CFI dd32 x23: .cfa -288 + ^ x24: .cfa -280 + ^
 """
-    with tempfile.NamedTemporaryFile() as sym_file:
-      osutils.WriteFile(sym_file.name, unadjusted)
-      cros_generate_android_breakpad_symbols._AdjustSymbolOffset(
-          sym_file.name, 42)
-      after = osutils.ReadFile(sym_file.name)
-      self.assertEqual(after, expected)
+        with tempfile.NamedTemporaryFile() as sym_file:
+            osutils.WriteFile(sym_file.name, unadjusted)
+            cros_generate_android_breakpad_symbols._AdjustSymbolOffset(
+                sym_file.name, 42
+            )
+            after = osutils.ReadFile(sym_file.name)
+            self.assertEqual(after, expected)
 
 
 class MockTests(cros_test_lib.RunCommandTestCase):
-  """Tests that need mocks & RunCommand mocks."""
+    """Tests that need mocks & RunCommand mocks."""
 
-  def testUnpackGenerateBreakpad(self):
-    """Test UnpackGenerateBreakpad call."""
-    output = """
+    def testUnpackGenerateBreakpad(self):
+        """Test UnpackGenerateBreakpad call."""
+        output = """
 INFO: Relocations   : RELA
 INFO: Packed           : 9544 bytes
 INFO: Unpacked         : 66888 bytes
 INFO: Relocations      : 2787 entries
 INFO: Expansion     : 0 bytes
 """
-    self.PatchObject(cros_generate_breakpad_symbols, 'GenerateBreakpadSymbol',
-                     return_value='/foo.sym')
-    self.rc.AddCmdResult(['relocation_packer', '-u', '/foo'], stdout=output)
-    cros_generate_android_breakpad_symbols._UnpackGenerateBreakpad('/foo')
+        self.PatchObject(
+            cros_generate_breakpad_symbols,
+            "GenerateBreakpadSymbol",
+            return_value="/foo.sym",
+        )
+        self.rc.AddCmdResult(["relocation_packer", "-u", "/foo"], stdout=output)
+        cros_generate_android_breakpad_symbols._UnpackGenerateBreakpad("/foo")

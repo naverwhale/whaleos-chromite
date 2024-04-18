@@ -1,4 +1,4 @@
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -8,6 +8,12 @@ per-file cros_test*=file:/OWNERS.chrome
 per-file device*=file:/OWNERS.chrome
 per-file dev_server*=file:/OWNERS.au
 per-file dlc*=file:/OWNERS.au
+per-file minios*=file:/OWNERS.au
 per-file nebraska*=file:/OWNERS.au
-per-file toolchain_util*=file:chromiumos/third_party/toolchain-utils:/OWNERS.toolchain
+per-file toolchain_util*=file:/OWNERS.crostc
+per-file verity*=file:/OWNERS.au
 per-file vm*=file:/OWNERS.chrome
+
+# Only Lacros related changes
+per-file chrome_util.py=svenzheng@chromium.org
+per-file chrome_util.py=erikchen@chromium.org

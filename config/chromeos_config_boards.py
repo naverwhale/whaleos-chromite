@@ -1,151 +1,116 @@
-# Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Configuration options for cbuildbot boards."""
 
-#
-# Define assorted constants describing various sets of boards.
-#
-
 # Base per-board configuration.
 # Every board must appear in exactly 1 of the following sets.
 
-#
-# Define assorted constants describing various sets of boards.
-#
+arm_internal_release_boards = frozenset(
+    [
+        "hana",
+        "littlejoe",
+        "tael",
+        "viking",
+        "viking-arm64",
+        "viking-poc2",
+    ]
+)
 
-# Base per-board configuration.
-# Every board must appear in exactly 1 of the following sets.
+arm_external_boards = frozenset()
 
-arm_internal_release_boards = frozenset([
-    'arkham',
-    'beaglebone',
-    'beaglebone_servo',
-    'gale',
-    'hana',
-    'littlejoe',
-    'nyan_big',
-    'nyan_blaze',
-    'tael',
-    'veyron_mighty',
-    'veyron_minnie',
-    'veyron_rialto',
-    'veyron_speedy',
-    'viking',
-    'viking-poc2',
-    'whirlwind',
-])
+x86_internal_release_boards = frozenset(
+    [
+        "glados",
+        "guado_labstation",
+        "guybrush",
+        "jecht",
+        "majolica",
+        "mancomb",
+        "poppy",
+        "sludge",
+        "tatl",
+        "wristpin",
+    ]
+)
 
-arm_external_boards = frozenset([
-    'arm-generic',
-    'arm64-generic',
-    'arm64-llvmpipe',
-])
-
-x86_internal_release_boards = frozenset([
-    'deltaur',
-    'falco_li',
-    'glados',
-    'guado_labstation',
-    'guybrush',
-    'jecht',
-    'majolica',
-    'mancomb',
-    'poppy',
-    'sludge',
-    'tatl',
-    'wristpin',
-])
-
-x86_external_boards = frozenset([
-    'amd64-generic',
-    'moblab-generic-vm',
-    'x32-generic',
-])
+x86_external_boards = frozenset(
+    [
+        "amd64-generic",
+    ]
+)
 
 # Board can appear in 1 or more of the following sets.
-brillo_boards = frozenset([
-    'arkham',
-    'gale',
-    'mistral',
-    'whirlwind',
-])
+brillo_boards = frozenset([])
 
-accelerator_boards = frozenset([
-    'fizz-accelerator',
-])
-
-beaglebone_boards = frozenset([
-    'beaglebone',
-    'beaglebone_servo',
-])
-
-dustbuster_boards = frozenset([
-    'wristpin',
-])
-
-lassen_boards = frozenset([
-    'lassen',
-])
+dustbuster_boards = frozenset(
+    [
+        "wristpin",
+    ]
+)
 
 loonix_boards = frozenset([])
 
-reven_boards = frozenset([
-    'reven',
-    'reven-vmtest',
-])
-
-wshwos_boards = frozenset([
-    'littlejoe',
-    'viking',
-    'viking-poc2',
-])
-
-moblab_boards = frozenset([
-    'puff-moblab',
-    'fizz-moblab',
-    'moblab-generic-vm',
-])
-
-scribe_boards = frozenset([
-    'guado-macrophage',
-    'puff-macrophage',
-])
-
-termina_boards = frozenset([
-    'sludge',
-    'tatl',
-    'tael',
-])
-
-nofactory_boards = (
-    termina_boards | lassen_boards | reven_boards | frozenset([
-        'x30evb',
-    ])
+reven_boards = frozenset(
+    [
+        "reven",
+        "reven-vmtest",
+    ]
 )
 
-toolchains_from_source = frozenset([
-    'x32-generic',
-])
+wshwos_boards = frozenset(
+    [
+        "littlejoe",
+        "viking",
+        "viking-arm64",
+        "viking-poc2",
+    ]
+)
 
-noimagetest_boards = (termina_boards | scribe_boards
-                      | wshwos_boards | dustbuster_boards)
+moblab_boards = frozenset(
+    [
+        "puff-moblab",
+        "fizz-moblab",
+    ]
+)
 
-nohwqual_boards = (lassen_boards | termina_boards
-                   | beaglebone_boards | wshwos_boards
-                   | dustbuster_boards | reven_boards)
+scribe_boards = frozenset(
+    [
+        "guado-macrophage",
+        "puff-macrophage",
+    ]
+)
 
-base_layout_boards = termina_boards
+termina_boards = frozenset(
+    [
+        "sludge",
+        "tatl",
+        "tael",
+    ]
+)
 
-builder_incompatible_binaries_boards = frozenset([
-    'grunt',
-    'grunt-arc64',
-    'grunt-arc-r',
-    'guybrush',
-    'majolica',
-    'mancomb',
-    'zork',
-    'zork-arc-r',
-    'zork-borealis',
-])
+labstation_boards = frozenset(
+    [
+        "fizz-labstation",
+        "guado_labstation",
+    ]
+)
+
+nofactory_boards = termina_boards | reven_boards | labstation_boards
+
+builder_incompatible_binaries_boards = frozenset(
+    [
+        "grunt",
+        "grunt-arc64",
+        "grunt-arc-r",
+        "guybrush",
+        "majolica",
+        "mancomb",
+        "zork",
+        "zork-arc-r",
+        "skyrim",
+        "skyrim-chausie",
+        "skyrim-kernelnext",
+    ]
+)

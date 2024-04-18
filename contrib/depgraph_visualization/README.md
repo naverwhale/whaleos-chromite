@@ -1,21 +1,5 @@
 # Depgraph Visualizer
 
-## Installation
-Enter your SDK, go to this modules location,
-then run install.sh to create a virtualenv and install all
-requirements and this module itself. Then just activate your virtualenv.
-
-```bash
-cros_sdk --enter
-cd ~/trunk/chromite/contrib/depgraph_visualization
-./install.sh
-source my_visualizations/bin/activate
-cd my_visualizations
-```
-
-This will put a script called `visualize_depgraph` on your PATH. From there you
-can run `visualize_depgraph --help` to see the available options.
-
 ## Usage
 To use  `visualize_depgraph` you only need to specify the
 `-b`/`--build-target` argument with the target build of your choosing.

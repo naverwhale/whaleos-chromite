@@ -1,6 +1,8 @@
 {
   "install_request": {
-    "flags": {"compile_source": true},
+    "flags": {
+      "compile_source": true
+    },
     "sysroot": {
       "buildTarget": {
         "name": "%(build_target)s"

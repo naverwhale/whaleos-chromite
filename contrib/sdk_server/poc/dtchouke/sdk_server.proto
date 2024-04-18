@@ -1,0 +1,19 @@
+syntax = "proto2";
+
+service UpdateService {
+  rpc UpdateChroot(UpdateRequest) returns (UpdateResponse);
+}
+
+service StreamService {
+  rpc GetStream(StreamRequest) returns (stream StreamResponse);
+}
+
+message UpdateRequest {}
+
+message UpdateResponse { optional ChrootVersion version = 1; }
+
+message ChrootVersion { required uint32 version = 1; }
+
+message StreamRequest {}
+
+message StreamResponse { required uint32 num = 1; }

@@ -1,0 +1,14 @@
+MODULE Linux x86_64 CBCB3C661504907000000000000000000 libHLSL.so
+INFO CODE_ID 663CCBCB04157090
+STACK CFI INIT 4a0 2e .cfa: $rsp 8 + .ra: .cfa -8 + ^
+STACK CFI INIT 4d0 40 .cfa: $rsp 8 + .ra: .cfa -8 + ^
+STACK CFI 4d1 .cfa: $rsp 16 +
+STACK CFI 509 .cfa: $rsp 8 +
+STACK CFI 50e .cfa: $rsp 16 +
+STACK CFI 50f .cfa: $rsp 8 +
+STACK CFI INIT 4a0 2e .cfa: $rsp 8 + .ra: .cfa -8 + ^
+STACK CFI INIT 4d0 40 .cfa: $rsp 8 + .ra: .cfa -8 + ^
+STACK CFI 4d1 .cfa: $rsp 16 +
+STACK CFI 509 .cfa: $rsp 8 +
+STACK CFI 50e .cfa: $rsp 16 +
+STACK CFI 50f .cfa: $rsp 8 +

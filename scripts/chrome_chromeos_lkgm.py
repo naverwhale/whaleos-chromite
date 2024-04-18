@@ -1,236 +1,402 @@
-# Copyright 2017 The Chromium OS Authors. All rights reserved.
+# Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Update the CHROMEOS_LKGM file in a chromium repository.
 
-This script will first query Gerrit for an already-open CL updating the
-CHROMEOS_LKGM file to the given version. If one exists, it will submit that
-CL to the CQ. Else it will upload a new CL and quit _without_ submitting
-it to the CQ.
+This script will upload an LKGM CL and potentially submit it to the CQ.
 """
 
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
-import os
-import urllib.parse
+from typing import Optional
 
-from chromite.cbuildbot import manifest_version
-from chromite.lib import chrome_committer
+from chromite.lib import chromeos_version
 from chromite.lib import commandline
 from chromite.lib import constants
 from chromite.lib import gerrit
-from chromite.lib import osutils
+from chromite.lib import gob_util
+from chromite.utils import hostname_util
 
 
-class LKGMNotValid(chrome_committer.CommitError):
-  """Raised if the LKGM version is unset or not newer than the current value."""
+# Gerrit hashtag for the LKGM Uprev CLs.
+HASHTAG = "chrome-lkgm"
 
 
-class LKGMFileNotFound(chrome_committer.CommitError):
-  """Raised if the LKGM file is not found."""
+class LKGMNotValid(Exception):
+    """The LKGM version is unset or not newer than the current value."""
 
 
-class ChromeLKGMCommitter(object):
-  """Committer object responsible for obtaining a new LKGM and committing it."""
+class LKGMFileNotFound(Exception):
+    """Raised if the LKGM file is not found."""
 
-  # The list of trybots we require LKGM updates to run and pass on before
-  # landing. Since they're internal trybots, the CQ won't automatically trigger
-  # them, so we have to explicitly tell it to.
-  _PRESUBMIT_BOTS = [
-      'chromeos-betty-pi-arc-chrome',
-      'chromeos-eve-chrome',
-      'chromeos-kevin-chrome',
-      'lacros-amd64-generic-chrome',
-  ]
-  # Files needed in a local checkout to successfully update the LKGM. The OWNERS
-  # file allows the --tbr-owners mechanism to select an appropriate OWNER to
-  # TBR. TRANSLATION_OWNERS is necesssary to parse CHROMEOS_OWNERS file since
-  # it has the reference.
-  _NEEDED_FILES = [
-      constants.PATH_TO_CHROME_CHROMEOS_OWNERS,
-      constants.PATH_TO_CHROME_LKGM,
-      'tools/translation/TRANSLATION_OWNERS',
-  ]
-  # First line of the commit message for all LKGM CLs.
-  _COMMIT_MSG_HEADER = 'LKGM %(lkgm)s for chromeos.'
 
-  def __init__(self, user_email, workdir, lkgm, dryrun=False,
-               buildbucket_id=None):
-    self._dryrun = dryrun
-    self._buildbucket_id = buildbucket_id
-    self._committer = chrome_committer.ChromeCommitter(user_email, workdir)
-    self._gerrit_helper = gerrit.GetCrosExternal()
+class ChromeLKGMCleaner:
+    """Responsible for cleaning up the existing LKGM CLs if necessary.
 
-    # Strip any chrome branch from the lkgm version.
-    self._lkgm = manifest_version.VersionInfo(lkgm).VersionString()
-    self._commit_msg_header = self._COMMIT_MSG_HEADER % {'lkgm': self._lkgm}
-    self._old_lkgm = None
-
-    if not self._lkgm:
-      raise LKGMNotValid('LKGM not provided.')
-    logging.info('lkgm=%s', lkgm)
-
-  def Run(self):
-    self.CloseOldLKGMRolls()
-    already_open_lkgm_cl = self.FindAlreadyOpenLKGMRoll()
-    if already_open_lkgm_cl:
-      self.SubmitToCQ(already_open_lkgm_cl)
-    else:
-      self._committer.Cleanup()
-      self._committer.Checkout(self._NEEDED_FILES)
-      self.UpdateLKGM()
-      self.CommitNewLKGM()
-      self._committer.Upload()
-
-  def CheckoutChrome(self):
-    """Checks out chrome into tmp checkout_dir."""
-    self._committer.Checkout(self._NEEDED_FILES)
-
-  @property
-  def lkgm_file(self):
-    return self._committer.FullPath(constants.PATH_TO_CHROME_LKGM)
-
-  def CloseOldLKGMRolls(self):
-    """Closes all open LKGM roll CLs that were last modified >24 hours ago.
-
-    Any roll that hasn't passed the CQ in 24 hours is likely broken and can be
-    discarded.
+    In Particular, this class does:
+        - abandoning the obsolete CLs
+        - rebasing the merge-conflicted CLs
     """
-    query_params = {
-        'project': constants.CHROMIUM_SRC_PROJECT,
-        'branch': 'main',
-        'file': constants.PATH_TO_CHROME_LKGM,
-        'age': '2d',
-        'status': 'open',
-        # Use 'owner' rather than 'uploader' or 'author' since those last two
-        # can be overwritten when the gardener resolves a merge-conflict and
-        # uploads a new patchset.
-        'owner': self._committer.author,
-    }
-    open_issues = self._gerrit_helper.Query(**query_params)
-    if not open_issues:
-      logging.info('No old LKGM rolls detected.')
-      return
-    for open_issue in open_issues:
-      if self._dryrun:
+
+    def __init__(
+        self,
+        branch: str,
+        current_lkgm: chromeos_version.VersionInfo,
+        user_email: str,
+        dryrun: bool = False,
+        buildbucket_id: Optional[str] = None,
+    ):
+        self._dryrun = dryrun
+        self._branch = branch
+        self._gerrit_helper = gerrit.GetCrosExternal()
+        self._buildbucket_id = buildbucket_id
+
+        self._user_email = user_email
+
+        # Strip any chrome branch from the lkgm version.
+        self._current_lkgm = current_lkgm
+
+    def ProcessObsoleteLKGMRolls(self):
+        """Clean up all obsolete LKGM roll CLs by abandoning or rebasing.
+
+        This method finds the LKGM roll CLs that were trying changing to an
+        older version than the current LKGM version, and abandons them.
+        """
+        query_params = {
+            "project": constants.CHROMIUM_SRC_PROJECT,
+            "branch": self._branch,
+            "file": constants.PATH_TO_CHROME_LKGM,
+            "status": "open",
+            "hashtag": HASHTAG,
+            # Use 'owner' rather than 'uploader' or 'author' since those last
+            # two can be overwritten when the gardener resolves a merge-conflict
+            # and uploads a new patchset.
+            "owner": self._user_email,
+        }
+        open_changes = self._gerrit_helper.Query(**query_params)
+        if not open_changes:
+            logging.info("No old LKGM rolls detected.")
+            return
+
         logging.info(
-            'Would have closed old LKGM roll crrev.com/c/%s',
-            open_issue.gerrit_number)
-      else:
+            "Retrieved the current LKGM version: %s",
+            self._current_lkgm.VersionString(),
+        )
+
+        build_link = ""
+        if self._buildbucket_id:
+            build_link = (
+                "\nUpdated by"
+                f" https://ci.chromium.org/b/{self._buildbucket_id}\n"
+            )
+
+        for change in open_changes:
+            logging.info(
+                "Found a open LKGM roll CL: %s (crrev.com/c/%s).",
+                change.subject,
+                change.gerrit_number,
+            )
+
+            # Retrieve the version that this CL tries to roll to.
+            roll_to_string = change.GetFileContents(
+                constants.PATH_TO_CHROME_LKGM
+            )
+            if roll_to_string is None:
+                logging.info("=> No LKGM change found in this CL.")
+                continue
+
+            roll_to = chromeos_version.VersionInfo(roll_to_string)
+            if roll_to <= self._current_lkgm:
+                # The target version that the CL is changing to is older than
+                # the current. The roll CL is useless so that it'd be abandoned.
+                logging.info(
+                    "=> This CL is an older LKGM roll than current: Abandoning"
+                )
+                if not self._dryrun:
+                    abandon_message = (
+                        "The newer LKGM"
+                        f" ({self._current_lkgm.VersionString()}) roll than"
+                        f" this CL has been landed.{build_link}"
+                    )
+                    self._gerrit_helper.AbandonChange(
+                        change,
+                        msg=abandon_message,
+                    )
+                continue
+
+            mergeable = change.IsMergeable()
+            if mergeable is None:
+                logging.info("=> Failed to get the mergeable state of the CL.")
+                continue
+
+            # This CL may be in "merge conflict" state. Resolve.
+            if not mergeable:
+                # Retrieve the version that this CL tries to roll from.
+                roll_from_string = change.GetOriginalFileContents(
+                    constants.PATH_TO_CHROME_LKGM
+                )
+                roll_from = chromeos_version.VersionInfo(
+                    roll_from_string.strip()
+                )
+
+                if roll_from == self._current_lkgm:
+                    # The CL should not be in the merge-conflict state.
+                    # mergeable=False might come from other reason.
+                    logging.info(
+                        "=> This CL tries to roll from the same LKGM. "
+                        "Doing nothing."
+                    )
+                    continue
+                elif roll_from >= self._current_lkgm:
+                    # This should not happen.
+                    logging.info(
+                        "=> This CL tries to roll from a newer LKGM. Maybe"
+                        "LKGM in Chromium code has been rolled back. Anyway, "
+                        "rebasing forcibly."
+                    )
+
+                else:
+                    logging.info(
+                        "=> This CL tries to roll from the older LKGM. "
+                        "Rebasing."
+                    )
+
+                # Resolve the conflict by rebasing.
+                if not self._dryrun:
+                    change.Rebase(allow_conflicts=True)
+                    self._gerrit_helper.ChangeEdit(
+                        change.gerrit_number,
+                        "chromeos/CHROMEOS_LKGM",
+                        roll_to_string,
+                    )
+                continue
+
+            logging.info("=> This CL is not in the merge-conflict state.")
+
+    def Run(self):
+        self.ProcessObsoleteLKGMRolls()
+
+
+class ChromeLKGMCommitter:
+    """Committer object responsible for obtaining and committing a new LKGM."""
+
+    # The list of trybots we require LKGM updates to run and pass on before
+    # landing. Since they're internal trybots, the CQ won't automatically
+    # trigger them, so we have to explicitly tell it to. If you add a new
+    # internal builder here, make sure it's also listed in
+    # https://source.chromium.org/chromium/chromium/src/+/main:infra/config/subprojects/chrome/try.star.
+    _PRESUBMIT_BOTS = (
+        "chromeos-betty-pi-arc-chrome",
+        "chromeos-eve-chrome",
+        "chromeos-jacuzzi-chrome",
+        "chromeos-octopus-chrome",
+        "chromeos-reven-chrome",
+    )
+    # Files needed in a local checkout to successfully update the LKGM. The
+    # OWNERS file allows the --tbr-owners mechanism to select an appropriate
+    # OWNER to TBR. TRANSLATION_OWNERS is necessary to parse CHROMEOS_OWNERS
+    # file since it has the reference.
+    _NEEDED_FILES = (
+        constants.PATH_TO_CHROME_CHROMEOS_OWNERS,
+        constants.PATH_TO_CHROME_LKGM,
+        "tools/translation/TRANSLATION_OWNERS",
+    )
+    # First line of the commit message for all LKGM CLs.
+    _COMMIT_MSG_HEADER = "Automated Commit: LKGM %(lkgm)s for chromeos."
+
+    def __init__(
+        self,
+        lkgm: str,
+        branch: str,
+        current_lkgm: chromeos_version.VersionInfo,
+        dryrun: bool = False,
+        buildbucket_id: Optional[str] = None,
+    ):
+        self._dryrun = dryrun
+        self._branch = branch
+        self._buildbucket_id = buildbucket_id
+        self._gerrit_helper = gerrit.GetCrosExternal()
+
+        # Strip any chrome branch from the lkgm version.
+        self._lkgm = chromeos_version.VersionInfo(lkgm).VersionString()
+        if self._dryrun:
+            self._lkgm = "9999999.99.99"
+            logging.info("dry run, using version %s", self._lkgm)
+
+        self._commit_msg_header = self._COMMIT_MSG_HEADER % {"lkgm": self._lkgm}
+        self._current_lkgm = current_lkgm
+
+        if not self._lkgm:
+            raise LKGMNotValid("LKGM not provided.")
+        logging.info("lkgm=%s", lkgm)
+
+    def Run(self):
+        self.UpdateLKGM()
+
+    @property
+    def lkgm_file(self):
+        return self._committer.FullPath(constants.PATH_TO_CHROME_LKGM)
+
+    def UpdateLKGM(self):
+        """Updates the LKGM file with the new version."""
+        if chromeos_version.VersionInfo(self._lkgm) <= self._current_lkgm:
+            raise LKGMNotValid(
+                f"LKGM version ({self._lkgm}) is not newer than current version"
+                f" ({self._current_lkgm.VersionString()})."
+            )
+
         logging.info(
-            'Closing old LKGM roll crrev.com/c/%s', open_issue.gerrit_number)
-        self._gerrit_helper.AbandonChange(
-            open_issue, msg='Superceded by LKGM %s' % self._lkgm)
+            "Updating LKGM version: %s (was %s),",
+            self._lkgm,
+            self._current_lkgm.VersionString(),
+        )
+        change = self._gerrit_helper.CreateChange(
+            "chromium/src", self._branch, self.ComposeCommitMsg(), False
+        )
+        self._gerrit_helper.ChangeEdit(
+            change.gerrit_number, "chromeos/CHROMEOS_LKGM", self._lkgm
+        )
 
-  def FindAlreadyOpenLKGMRoll(self):
-    """Queries Gerrit for a CL that already rolls the LKGM to our version.
+        if self._dryrun:
+            logging.info(
+                "Would have applied CQ+2 to crrev.com/c/%s",
+                change.gerrit_number,
+            )
+            self._gerrit_helper.AbandonChange(
+                change,
+                msg="Dry run",
+            )
+            return
 
-    For a given LKGM, both the master-full and master-release builders provide
-    SDKs needed by Chrome-infra. These two builders aren't synchronized, so
-    one can finish hours before the other. To avoid updating the LKGM in Chrome
-    before they're both finished, we take a two-stage approach:
-    1. Whichever builder finishes first uploads the LKGM CL.
-    2. Whichever builder finishes last submits that CL to the CQ.
+        labels = {
+            "Bot-Commit": 1,
+            "Commit-Queue": 2,
+        }
+        logging.info(
+            "Applying %s to crrev.com/c/%s", labels, change.gerrit_number
+        )
+        self._gerrit_helper.SetReview(
+            change.gerrit_number,
+            labels=labels,
+            notify="NONE",
+            ready=True,
+            reviewers=[constants.CHROME_GARDENER_REVIEW_EMAIL],
+        )
+        self._gerrit_helper.SetHashtags(change.gerrit_number, [HASHTAG], [])
 
-    This method queries Gerrit to find the CL for step #2.
+    def ComposeCommitMsg(self):
+        """Constructs and returns the commit message for the LKGM update."""
+        dry_run_message = (
+            "This CL was created during a dry run and is not "
+            "intended to be committed.\n"
+        )
+        commit_msg_template = (
+            "%(header)s\n%(build_link)s\n%(message)s\n%(cq_includes)s"
+        )
+        cq_includes = ""
+        if self._branch == "main":
+            for bot in self._PRESUBMIT_BOTS:
+                cq_includes += "CQ_INCLUDE_TRYBOTS=luci.chrome.try:%s\n" % bot
+        build_link = ""
+        if self._buildbucket_id:
+            build_link = "\nUploaded by https://ci.chromium.org/b/%s\n" % (
+                self._buildbucket_id
+            )
+        return commit_msg_template % dict(
+            header=self._commit_msg_header,
+            cq_includes=cq_includes,
+            build_link=build_link,
+            message=dry_run_message if self._dryrun else "",
+        )
 
-    Returns:
-      Returns a patch.GerritPatch for the CL if it exists, None otherwise.
+
+def GetCurrentLKGM(branch: str) -> chromeos_version.VersionInfo:
+    """Returns the current LKGM version on the branch.
+
+    On the first call, this method retrieves the LKGM version from Gitiles
+    server and returns it. On subsequent calls, this method returns the
+    cached LKGM version.
+
+    Raises:
+        LKGMNotValid: if the retrieved LKGM version from the repository is
+        invalid.
     """
-    query_params = {
-        'project': constants.CHROMIUM_SRC_PROJECT,
-        'branch': 'main',
-        'file': constants.PATH_TO_CHROME_LKGM,
-        'status': 'open',
-        # Use 'owner' rather than 'uploader' or 'author' since those last two
-        # can be overwritten when the gardener resolves a merge-conflict and
-        # uploads a new patchset.
-        'owner': self._committer.author,
-        # The value of the LKGM is included in the first line of the commit
-        # message. So including that in our query should only return CLs that
-        # roll to our LKGM.
-        'message': urllib.parse.quote(self._commit_msg_header),
-    }
-    issues = self._gerrit_helper.Query(**query_params)
-    if len(issues) > 1:
-      # This shouldn't happen?
-      raise LKGMNotValid('More than one roll CL open for LKGM %s'% self._lkgm)
-    return issues[0] if issues else None
+    current_lkgm = gob_util.GetFileContents(
+        constants.CHROMIUM_GOB_URL,
+        constants.PATH_TO_CHROME_LKGM,
+        ref=branch,
+    )
+    if current_lkgm is None:
+        raise LKGMNotValid(
+            "The retrieved LKGM version from the repository is invalid:"
+            f" {current_lkgm}."
+        )
 
-  def SubmitToCQ(self, already_open_lkgm_cl):
-    """Sends the already_open_lkgm_cl to the CQ."""
-    labels = {'Commit-Queue': 2}
-    if self._dryrun:
-      logging.info('Would have applied CQ+2 to %s', already_open_lkgm_cl)
-    else:
-      logging.info('Applying CQ+2 to %s', already_open_lkgm_cl)
-      self._gerrit_helper.SetReview(already_open_lkgm_cl, labels=labels)
-
-  def UpdateLKGM(self):
-    """Updates the LKGM file with the new version."""
-    lkgm_file = self.lkgm_file
-    if not os.path.exists(lkgm_file):
-      raise LKGMFileNotFound('%s is an invalid file' % lkgm_file)
-
-    self._old_lkgm = osutils.ReadFile(lkgm_file)
-
-    lv = distutils.version.LooseVersion
-    if self._old_lkgm is not None and lv(self._lkgm) <= lv(self._old_lkgm):
-      raise LKGMNotValid(
-          'LKGM version (%s) is not newer than current version (%s).' %
-          (self._lkgm, self._old_lkgm))
-
-    logging.info('Updating LKGM version: %s (was %s),',
-                 self._lkgm, self._old_lkgm)
-    osutils.WriteFile(lkgm_file, self._lkgm)
-
-  def ComposeCommitMsg(self):
-    """Constructs and returns the commit message for the LKGM update."""
-    commit_msg_template = (
-        '%(header)s\n'
-        '%(build_link)s'
-        '\n%(cq_includes)s')
-    cq_includes = ''
-    for bot in self._PRESUBMIT_BOTS:
-      cq_includes += 'CQ_INCLUDE_TRYBOTS=luci.chrome.try:%s\n' % bot
-    build_link = ''
-    if self._buildbucket_id:
-      build_link = '\nUploaded by https://ci.chromium.org/b/%s\n' % (
-          self._buildbucket_id)
-    return commit_msg_template % dict(
-        header=self._commit_msg_header, cq_includes=cq_includes,
-        build_link=build_link)
-
-  def CommitNewLKGM(self):
-    """Commits the new LKGM file using our template commit message."""
-    self._committer.Commit([constants.PATH_TO_CHROME_LKGM],
-                           self.ComposeCommitMsg())
+    return chromeos_version.VersionInfo(current_lkgm.strip())
 
 
 def GetOpts(argv):
-  """Returns a dictionary of parsed options.
+    """Returns a dictionary of parsed options.
 
-  Args:
-    argv: raw command line.
+    Args:
+        argv: raw command line.
 
-  Returns:
-    Dictionary of parsed options.
-  """
-  committer_parser = chrome_committer.ChromeCommitter.GetParser()
-  parser = commandline.ArgumentParser(description=__doc__,
-                                      parents=[committer_parser],
-                                      add_help=False, logging=False)
-  parser.add_argument('--lkgm', required=True,
-                      help='LKGM version to update to.')
-  parser.add_argument('--buildbucket-id',
-                      help='Buildbucket ID of the build that ran this script. '
-                           'Will be linked in the commit message if specified.')
-  return parser.parse_args(argv)
+    Returns:
+        Dictionary of parsed options.
+    """
+    parser = commandline.ArgumentParser(description=__doc__, add_help=False)
+    parser.add_argument(
+        "--dryrun",
+        action="store_true",
+        default=False,
+        help="Don't commit changes or send out emails.",
+    )
+    parser.add_argument("--lkgm", help="LKGM version to update to.")
+    parser.add_argument(
+        "--buildbucket-id",
+        help="Buildbucket ID of the build that ran this script. "
+        "Will be linked in the commit message if specified.",
+    )
+    parser.add_argument(
+        "--branch",
+        default="main",
+        help="Branch to upload change to, e.g. "
+        "refs/branch-heads/5112. Defaults to main.",
+    )
+    return parser.parse_args(argv)
+
 
 def main(argv):
-  opts = GetOpts(argv)
-  committer = ChromeLKGMCommitter(opts.user_email, opts.workdir,
-                                  opts.lkgm, opts.dryrun, opts.buildbucket_id)
-  committer.Run()
-  return 0
+    opts = GetOpts(argv)
+    current_lkgm = GetCurrentLKGM(opts.branch)
+
+    if opts.lkgm is not None:
+        committer = ChromeLKGMCommitter(
+            opts.lkgm,
+            opts.branch,
+            current_lkgm,
+            opts.dryrun,
+            opts.buildbucket_id,
+        )
+        committer.Run()
+
+    # We need to know the account used by the builder to upload git CLs when
+    # listing up CLs.
+    user_email = ""
+    if hostname_util.host_is_ci_builder(golo_only=True):
+        user_email = "chromeos-commit-bot@chromium.org"
+    elif hostname_util.host_is_ci_builder(gce_only=True):
+        user_email = "3su6n15k.default@developer.gserviceaccount.com"
+    else:
+        raise LKGMFileNotFound("Failed to determine an appropriate user email.")
+
+    cleaner = ChromeLKGMCleaner(
+        opts.branch,
+        current_lkgm,
+        user_email,
+        opts.dryrun,
+        opts.buildbucket_id,
+    )
+    cleaner.Run()
+
+    return 0

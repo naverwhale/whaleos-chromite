@@ -1,0 +1,489 @@
+{
+  "adb-homedir-init.conf": [
+    "chown adb:adb \"${ADB_HOME}\"",
+    "chown -R adb:adb \"${ADB_SSH_DIR}\"",
+    "cp /root/.ssh/* \"${ADB_SSH_DIR}\"",
+    "mkdir -p \"${ADB_HOME}\"",
+    "mkdir -p \"${ADB_SSH_DIR}\""
+  ],
+  "apex-monitor.conf": [
+    "chown cfm-monitor /sys/class/gpio/gpio404/direction",
+    "chown cfm-monitor /sys/class/gpio/gpio404/value",
+    "chown cfm-monitor /sys/class/gpio/gpio416/direction",
+    "chown cfm-monitor /sys/class/gpio/gpio416/value",
+    "chown cfm-monitor /sys/class/gpio/gpio417/direction",
+    "chown cfm-monitor /sys/class/gpio/gpio417/value",
+    "chown :cfm-monitor /dev/${bus}",
+    "chown :cfm-monitor /dev/${i2c_bus}",
+    "chmod 0660 /dev/${bus}",
+    "chmod 0660 /dev/${i2c_bus}"
+  ],
+  "arc-data-snapshotd-worker.conf": [
+    "chown -R arc-data-snapshotd:arc-data-snapshotd /run/arc-data-snapshotd",
+    "chown android-root:android-root \"${CHROMEOS_USER_HOME}/android-data\"",
+    "cp /home/.shadow/salt /run/arc-data-snapshotd/salt",
+    "mkdir -p -m 550 /run/arc-data-snapshotd",
+    "mkdir -p -m 700 \"${CHROMEOS_USER_HOME}/android-data\""
+  ],
+  "arc-data-snapshotd.conf": [
+    "chown -R arc-data-snapshotd:arc-data-snapshotd \"${SNAPSHOT_DIR}\"",
+    "cp /usr/share/chromeos-assets/images/boot_message_light.png \"${SNAPSHOT_DIR}/images/boot_message.png\"",
+    "mkdir -m 755 \"${SNAPSHOT_DIR}\"",
+    "mkdir -m 755 \"${SNAPSHOT_DIR}/images\"",
+    "mkdir -m 755 \"${SNAPSHOT_DIR}/tmp\"",
+    "rm -rf \"${SNAPSHOT_DIR}/tmp\""
+  ],
+  "arcvm-boot-notification-server.conf": [
+    "chown arcvm-boot-notification-server:chronos /run/arcvm_boot_notification_server",
+    "mkdir -m 710 -p /run/arcvm_boot_notification_server",
+    "rm -rf /run/arcvm_boot_notification_server"
+  ],
+  "arcvm-host.conf": [
+    "chmod 440 /var/lib/misc/arc_salt",
+    "chmod 750 /run/arcvm/host_generated",
+    "chmod 755 -R /run/arcvm/host_generated/oem",
+    "chmod 755 /run/arcvm/host_generated",
+    "chown crosvm:crosvm -R /run/arcvm/host_generated/oem",
+    "chown crosvm:crosvm /run/arcvm",
+    "chown crosvm:crosvm /run/arcvm/host_generated",
+    "chown root:chronos /var/lib/misc/arc_salt",
+    "mkdir -p /run/arcvm",
+    "mkdir -p /run/arcvm/host_generated",
+    "mkdir -p /run/arcvm/host_generated/oem/etc/permissions"
+  ],
+  "arcvm-mount-play-files.conf": [
+    "mkdir -p \"${DEST}\"",
+    "mkdir -p \"${SOURCE}\""
+  ],
+  "arcvm-mount-sdcard-dir.conf": [
+    "mkdir -p \"${SDCARD_DIR}\""
+  ],
+  "attestationd.conf": [
+    "chgrp preserve /mnt/stateful_partition/unencrypted/preserve",
+    "chmod 775 /mnt/stateful_partition/unencrypted/preserve",
+    "mv \"${OLD_ATTESTATION_PATH}\" \"${NEW_ATTESTATION_PATH}\"",
+    "rm -f \"${ABE_DATA_FILE}\""
+  ],
+  "auditd.conf": [
+    "mkdir -p /var/log/audit"
+  ],
+  "auth-failure.conf": [
+    "rm \"$tmp_log\""
+  ],
+  "avahi.conf": [
+    "mkdir -p /run/avahi-daemon"
+  ],
+  "bio_crypto_init.conf": [
+    "chmod 660 \"${FP_DEV}\"",
+    "chown biod:biod \"${LOG_DIR}\"",
+    "chown root:biod \"${FP_DEV}\"",
+    "mkdir -m 755 -p \"${LOG_DIR}\"",
+    "rm -f /run/bio_crypto_init/seed"
+  ],
+  "biod.conf": [
+    "chown biod:biod \"${LOG_DIR}\"",
+    "mkdir -m 755 -p \"${LOG_DIR}\""
+  ],
+  "bluetoothlog.conf": [
+    "chown -R bluetooth:chronos-access \"${BLUETOOTH_LOGDIR}\"",
+    "mkdir -p -m 0750 \"${BLUETOOTH_LOGDIR}\"",
+    "rm -rf \"${BLUETOOTH_LOGDIR}\""
+  ],
+  "boot-logging-moblab.conf": [
+    "mkdir -p \"${LOGDIR}\""
+  ],
+  "boot-logging-satlab.conf": [
+    "mkdir -p \"${LOGDIR}\""
+  ],
+  "boot-update-firmware.conf": [
+    "mkdir -p \"${FP_LOG_DIR}\"",
+    "rm -f \"${COLD_BOOT_FILE}\"",
+    "rm -f \"${REBOOT_FILE}\""
+  ],
+  "bootchart.conf": [
+    "mkdir -p \"${BC_LOG}\"",
+    "mkdir -p \"${BC_RUN}\"",
+    "rm -rf \"${BC_RUN}\""
+  ],
+  "bootlockboxd.conf": [
+    "chown -R bootlockboxd:bootlockboxd \"${LOCKBOX_DIR}\"",
+    "mkdir -p -m 0755 \"${LOCKBOX_DIR}\""
+  ],
+  "btadapterd.conf": [
+    "rm \"/run/bluetooth/bluetooth${HCI}.pid\""
+  ],
+  "cdm-oemcrypto.conf": [
+    "chown cdm-oemcrypto:cdm-oemcrypto /var/lib/oemcrypto",
+    "chown cdm-oemcrypto:cdm-oemcrypto /var/lib/oemcrypto/wrapped_amd_keybox.hex",
+    "mkdir -p -m 0700 /var/lib/oemcrypto",
+    "rm /var/lib/oemcrypto/wrapped_amd_keybox.hex"
+  ],
+  "cgroups.conf": [
+    "chmod g+w \"${cgroup_dir}/${vm_type}/${entry}\"",
+    "chown android-root:android-root /sys/fs/cgroup/${subsys}/session_manager_containers",
+    "chown chronos:chronos \"${cset_dir}/tasks\"",
+    "chown chronos:chronos /sys/fs/cgroup/${subsys}/chronos_containers",
+    "chown power:power /sys/fs/cgroup/${subsys}/chronos_containers/freezer.state",
+    "chown power:power /sys/fs/cgroup/${subsys}/session_manager_containers/freezer.state",
+    "chown power:power /sys/fs/cgroup/freezer/user_containers/freezer.state",
+    "chown root:crosvm \"${cgroup_dir}/${vm_type}/${entry}\"",
+    "chown user-containers:user-containers /sys/fs/cgroup/${subsys}/user_containers",
+    "mkdir -p \"${cgroup_dir}/${vm_type}\"",
+    "mkdir -p \"${cset_dir}\"",
+    "mkdir -p /sys/fs/cgroup/${subsys}",
+    "mkdir -p /sys/fs/cgroup/${subsys}/chronos_containers",
+    "mkdir -p /sys/fs/cgroup/${subsys}/session_manager_containers",
+    "mkdir -p /sys/fs/cgroup/${subsys}/user_containers"
+  ],
+  "chapsd.conf": [
+    "chown chaps:chronos-access /var/lib/chaps",
+    "mkdir -p /var/lib/chaps"
+  ],
+  "check-rmtfs-early.conf": [
+    "chgrp rmtfs /dev/qcom_rmtfs_mem1",
+    "chmod 0660 /dev/qcom_rmtfs_mem1"
+  ],
+  "cleanup-shutdown-logs.conf": [
+    "rm -rf \"/var/log/metrics/${log}\" || :"
+  ],
+  "collect-early-logs.conf": [
+    "rm -f /run/tmpfiles.log"
+  ],
+  "cr50-update.conf": [
+    "rm -f \"${STATE_DIR}\"/cr50.*.state"
+  ],
+  "create-system-key.conf": [
+    "rm -f \"${SYSTEM_KEY_LOG_FILE}\""
+  ],
+  "cros-camera-failsafe.conf": [
+    "touch \"${FORCE_START_CROS_CAMERA_PATH}\""
+  ],
+  "cros_healthd.conf": [
+    "chown cros_healthd:cros_healthd /var/cache/diagnostics",
+    "mkdir -p /var/cache/diagnostics"
+  ],
+  "crosdns.conf": [
+    "chmod 0644 /run/crosdns/hosts",
+    "chown crosdns:crosdns /run/crosdns/",
+    "chown crosdns:crosdns /run/crosdns/hosts",
+    "cp /etc/hosts /run/crosdns/hosts",
+    "mkdir -p -m 0755 /run/crosdns/"
+  ],
+  "cryptohomed.conf": [
+    "mkdir -m 0700 \"${CRYPTOHOME_EPHEMERAL_PATH}\""
+  ],
+  "cups-post-upstart-socket-bridge.conf": [
+    "$(chown root:${lp_group} \"${CUPS_SOCKET}\" 2>&1 && chmod 770 \"${CUPS_SOCKET}\" 2>&1)\""
+  ],
+  "cups-pre-upstart-socket-bridge.conf": [
+    "$(mkdir -p -m 0755 \"${CUPS_SOCKET_DIR}\" 2>&1) || logger -t \"${UPSTART_JOB}\" \"Failed to create cups run dir: ${output}\""
+  ],
+  "dbus.conf": [
+    "rm -f /var/lib/dbus/machine-id"
+  ],
+  "debugd.conf": [
+    "chgrp debugd ${MALI_HWC_ENABLE} && chmod g+w ${MALI_HWC_ENABLE}",
+    "chgrp debugfs-access ${TRACING}/${file} &&",
+    "chgrp debugfs-access ${TRACING}/${file} && chmod g+w ${TRACING}/${file}",
+    "chgrp debugfs-access ${TRACING}/instances/${instance}/${file} && chmod g+w ${TRACING}/instances/${instance}/${file}",
+    "chmod a+rx ${TRACING}/.",
+    "chmod a+w ${TRACING}/trace_marker",
+    "chmod g+w ${TRACING}/${file}",
+    "cp -aPZ --remove-destination /mnt/stateful_partition/unencrypted/clobber.log /mnt/stateful_partition/unencrypted/clobber-state.log /mnt/stateful_partition/unencrypted/preserve/powerwash_count /var/log/ || true"
+  ],
+  "displaylink-driver.conf": [
+    "chgrp video ${EVDI_ADD}",
+    "chmod g+w ${EVDI_ADD}",
+    "chown dlm:dlm /var/log/displaylink",
+    "mkdir -p -m 0755 /var/log/displaylink"
+  ],
+  "dlcservice.conf": [
+    "chmod -R u+rwX,go+rX,go-w \"${dlc_path}\"",
+    "chown -R dlcservice:dlcservice \"${PRELOAD_PATH}\"",
+    "chown -R dlcservice:dlcservice \"${dlc_path}\"",
+    "mkdir -p \"${dlc_path}\""
+  ],
+  "dnsmasq.conf": [
+    "chmod 0644 /var/lib/misc/dnsmasq.leases",
+    "chown dnsmasq:dnsmasq /var/lib/misc/dnsmasq.leases",
+    "touch /var/lib/misc/dnsmasq.leases"
+  ],
+  "early-failure-cleanup.conf": [
+    "rm -vf \"${base}\"* || true"
+  ],
+  "generate_rdc_update.conf": [
+    "chmod 440 \"${DIST_FILE}\"",
+    "chown cras:cras \"${CRAS_RUN_DIR}\"",
+    "chown cras:cras \"${DIST_FILE}\"",
+    "cp \"${DEFAULT_RDC_FILE}\" \"${DIST_FILE}\"",
+    "mkdir -p -m 1770 \"${CRAS_RUN_DIR}\""
+  ],
+  "hammerd.conf": [
+    "chmod 770 \"${sysfs_parent_dir}\"",
+    "chown hammerd:metrics \"${sysfs_parent_dir}\"",
+    "mkdir -p \"${sysfs_parent_dir}\"",
+    "rm \"${WRITE_SYSFS_PATH}\" || true"
+  ],
+  "hotlog.conf": [
+    "chown hotlog:hotlog \"${stateful_root}\"",
+    "mkdir -p \"${stateful_root}\""
+  ],
+  "hpsd.conf": [
+    "chown -R hpsd:hpsd /var/lib/hpsd",
+    "mkdir -m 0700 -p /var/lib/hpsd/metrics"
+  ],
+  "huddly-monitor.conf": [
+    "chown cfm-monitor /sys/class/gpio/gpio209/direction",
+    "chown cfm-monitor /sys/class/gpio/gpio209/value",
+    "chown cfm-monitor /sys/class/gpio/gpio218/direction",
+    "chown cfm-monitor /sys/class/gpio/gpio218/value",
+    "chown cfm-monitor /sys/class/gpio/gpio219/direction",
+    "chown cfm-monitor /sys/class/gpio/gpio219/value"
+  ],
+  "install-completed.conf": [
+    "rm -f \"${INSTALL_COMPLETED}\"",
+    "rm -f /var/lib/xkb/*.xkm"
+  ],
+  "ip-peripheral.conf": [
+    "chown -R ip-peripheral:ip-peripheral /sys/module/mausb_host"
+  ],
+  "ip_periph_interfaces.conf": [
+    "mkdir -p /tmp/ip_periph"
+  ],
+  "ippusb-bridge.conf": [
+    "chmod 0775 \"${IPPUSB_SOCKET_DIR}\"",
+    "chown \"${IPPUSB_USER}:${IPPUSB_GROUP}\" \"${IPPUSB_SOCKET_DIR}\"",
+    "mkdir -p -m 0710 \"${IPPUSB_SOCKET_DIR}\"",
+    "rm -f \"${IPPUSB_SOCKET_DIR}/${VID}-${PID}.sock\""
+  ],
+  "journald.conf": [
+    "rm /run/systemd-journald.pid || true"
+  ],
+  "lacros-mounter.conf": [
+    "chown chronos:chronos \"${LACROS_MOUNT_POINT}\"",
+    "mkdir -p \"${LACROS_MOUNT_POINT}\""
+  ],
+  "lacros-unmounter.conf": [
+    "rm -rf \"${LACROS_MOUNT_POINT}\""
+  ],
+  "login.conf": [
+    "touch /run/state/logged-in"
+  ],
+  "logout.conf": [
+    "rm -f /run/state/logged-in"
+  ],
+  "metrics_library.conf": [
+    "chown -R metrics:metrics /run/metrics",
+    "chown chronos:chronos \"${EVENTS_FILE}\"",
+    "ln -sf ${EVENTS_FILE} /run/metrics",
+    "mkdir -p \"${METRICS_DIR}\"",
+    "mkdir -p /run/metrics/external",
+    "rm \"${EVENTS_FILE}\"",
+    "touch \"${EVENTS_FILE}\""
+  ],
+  "ml-service.conf": [
+    "chown -R ml-service:ml-service /var/lib/ml_service",
+    "mkdir -m 0755 -p /var/lib/ml_service/metrics"
+  ],
+  "mobbase-python-fix-init.conf": [
+    "ln -s /usr/bin/python2.7 \"${PYTHON_LOCAL_LINK}\"",
+    "mkdir -p /usr/local/bin"
+  ],
+  "moblab-compose-down.conf": [
+    "mkdir -p /var/log/bootup/"
+  ],
+  "moblab-compose-up.conf": [
+    "mkdir -p /usr/local/tmp/moblab-dev",
+    "mkdir -p /var/log/bootup/"
+  ],
+  "moblab-dhcp.conf": [
+    "mkdir -p /var/log/bootup/"
+  ],
+  "moblab-dockerd.conf": [
+    "ln -s \"${OLD_DOCKER_DATA_ROOT}/volumes\" \"${DOCKER_DATA_ROOT}/volumes\"",
+    "mkdir -p \"${DOCKER_DATA_ROOT}\"",
+    "mkdir -p /var/log/bootup/",
+    "mkdir -p /var/run/dockerd"
+  ],
+  "moblab-host-server.conf": [
+    "mkdir -p /var/log/bootup/",
+    "mkdir -p /var/log/moblab"
+  ],
+  "moblab-network-init.conf": [
+    "mkdir -p /var/log/bootup/"
+  ],
+  "modemfwd.conf": [
+    "chown modem:modem /var/cache/modemfwd",
+    "chown modem:modem /var/lib/modemfwd",
+    "chown modem:modem /var/log/modemfwd",
+    "mkdir -p /var/cache/modemfwd",
+    "mkdir -p /var/lib/modemfwd",
+    "mkdir -p /var/log/modemfwd"
+  ],
+  "modemfwd-helpers.conf": [
+    "chgrp gpio /sys/class/gpio/export",
+    "chmod g+w /sys/class/gpio/export"
+  ],
+  "mount-encrypted.conf": [
+    "cp -aPZ --remove-destination /run/mount_encrypted/mount-encrypted.log /var/log/ || true"
+  ],
+  "nebraska.conf": [
+    "mkdir -p \"$(dirname \"${STATEFUL_LSB_RELEASE_FILE}\")\" && touch \"${STATEFUL_LSB_RELEASE_FILE}\""
+  ],
+  "oobe_config_restore.conf": [
+    "chown oobe_config_restore:oobe_config_restore /var/lib/oobe_config_restore",
+    "mkdir -m 700 -p /var/lib/oobe_config_restore"
+  ],
+  "p2p.conf": [
+    "chmod 755 $P2P_DIR",
+    "chown root:root $P2P_DIR",
+    "mkdir -p $P2P_DIR"
+  ],
+  "ptp4l.conf": [
+    "chown -R ptp:ptp /run/ptp4l",
+    "mkdir -p /run/ptp4l"
+  ],
+  "persist-crash-test.conf": [
+    "cp -v \"${source}\" /run/crash_reporter/",
+    "rm -v \"${source}\""
+  ],
+  "preload-network.conf": [
+    "rm -f /var/lib/ureadahead/pack"
+  ],
+  "pstore.conf": [
+    "chgrp \"${PSTORE_GROUP}\" \"${path}\"",
+    "chmod 0750 \"${path}\""
+  ],
+  "resourced.conf": [
+    "chown resourced:resourced $CPUFREQ_GLOB"
+  ],
+  "rmtfs.conf": [
+    "chmod 0700 \"${RMTFS_BOOT_DIR}\" \"${RMTFS_DIR}\"",
+    "chmod g+w /sys/bus/platform/drivers/qcom-q6v5-mss/[0-9]*/remoteproc/remoteproc*/state",
+    "chown rmtfs:rmtfs \"${RMTFS_BOOT_DIR}\" \"${RMTFS_DIR}\"",
+    "chown rmtfs:rmtfs \"${RMTFS_BOOT_DIR}/${f}\"",
+    "chown rmtfs:rmtfs /sys/bus/platform/drivers/qcom-q6v5-mss/[0-9]*/remoteproc/remoteproc*/state",
+    "mkdir -p \"${RMTFS_BOOT_DIR}\"",
+    "touch \"${RMTFS_BOOT_DIR}/${f}\""
+  ],
+  "satlab-compose-down.conf": [
+    "mkdir -p /var/log/bootup/"
+  ],
+  "satlab-compose-up.conf": [
+    "chmod 666 /var/run/docker.sock",
+    "mkdir -p /usr/local/tmp/satlab-dev",
+    "mkdir -p /var/log/bootup/"
+  ],
+  "satlab-remote-access.conf": [
+    "mkdir -p /usr/local/tmp/satlab-dev",
+    "mkdir -p /var/log/bootup/"
+  ],
+  "send-powerwash-metrics.conf": [
+    "rm -f \"${POWERWASH_COMPLETE}\" \"${POWERWASH_TIME}\""
+  ],
+  "send-reclamation-metrics.conf": [
+    "rm -f \"${reclamation_file}\""
+  ],
+  "send-recovery-metrics.conf": [
+    "rm -f \"${RECOVERY_HISTOGRAMS}\""
+  ],
+  "send-tpm-firmware-update-metrics.conf": [
+    "rm -f /run/tpm-firmware-updater.status"
+  ],
+  "seneschal.conf": [
+    "mkdir -p /run/arc/sdcard"
+  ],
+  "servod.conf": [
+    "mkdir -p /var/lib/servod"
+  ],
+  "servod-usb-lock-file.conf": [
+    "chmod 444 \"${SERVOD_USB_LOCK_FILE}\"",
+    "touch \"${SERVOD_USB_LOCK_FILE}\""
+  ],
+  "sound_card_init.conf": [
+    "chown -R sound_card_init:sound_card_init /var/lib/sound_card_init",
+    "mkdir -m 0755 -p /var/lib/sound_card_init/\"${SOUND_CARD_ID}\""
+  ],
+  "tlsdated.conf": [
+    "chmod 0644 /var/cache/tlsdated/timestamp || true",
+    "mkdir -m 755 -p /var/cache/tlsdated",
+    "mkdir -p /run/shill || true"
+  ],
+  "tpm-probe.conf": [
+    "chown tss:tss /run/tcsd",
+    "mkdir -p /run/tcsd"
+  ],
+  "tpm2-simulator.conf": [
+    "chown -R tpm2-simulator:tpm2-simulator \"${SIMULATOR_DIR}\"",
+    "mkdir -p -m 755 \"${SIMULATOR_DIR}\""
+  ],
+  "tpm_managerd.conf": [
+    "chown -R tpm_manager:tpm_manager \"${LOCAL_DATA_DIRECTORY}\"",
+    "mkdir -m 0755 \"${LOCAL_DATA_DIRECTORY}\""
+  ],
+  "traced.conf": [
+    "rm -rf \"${PERFETTO_SOCK_DIR}\"/*"
+  ],
+  "traced_probes.conf": [
+    "chgrp debugfs-access \"${tracefs_root}\"/per_cpu/cpu*/trace \"${tracefs_root}\"/per_cpu/cpu*/trace_pipe_raw \"${tracefs_root}\"/per_cpu/cpu*/stats \"${tracefs_root}\"/events/header_page \"${tracefs_root}\"/printk_formats",
+    "chmod g+w \"${tracefs_root}\"/per_cpu/cpu*/trace",
+    "chmod g+w \"${tracefs_root}\"/trace"
+  ],
+  "trim.conf": [
+    "mkdir -p \"${CHROMEOS_TRIM_DIR}\""
+  ],
+  "tsum-scaler-updater.conf": [
+    "chown cfm-firmware-updaters ${TEMP_DIR_PATH}",
+    "chown cfm-firmware-updaters ${TEMP_DIR_PATH}/${SCALER_FIRMWARE}",
+    "chown cfm-firmware-updaters /dev/i2c-7",
+    "chown cfm-firmware-updaters /run/lock/firmware_utility_lock",
+    "cp /lib/firmware/google/tsum-scaler/${SCALER_FIRMWARE} ${TEMP_DIR_PATH}",
+    "mkdir -p ${TEMP_DIR_PATH}",
+    "rm ${TEMP_DIR_PATH}/${SCALER_FIRMWARE} ||:"
+  ],
+  "u2fd.conf": [
+    "mkdir -p -m 0700 \"${FORCE_DIR}\"",
+    "mkdir -p /var/lib/devicesettings"
+  ],
+  "update-engine.conf": [
+    "mkdir -p \"${cgroup_cpu_dir}\"",
+    "mkdir -p \"${cgroup_net_cls_dir}\""
+  ],
+  "usbguard-wrapper.conf": [
+    "chown usbguard:usbguard . rules.conf",
+    "mkdir -p /run/usbguard/",
+    "rm -f /run/usbguard/rules.conf",
+    "rm -f rules.conf"
+  ],
+  "virtual-file-provider-cgroup.conf": [
+    "chown power:power \"${cgroup}/freezer.state\"",
+    "chown virtual-file-provider:virtual-file-provider \"${cgroup}/cgroup.procs\"",
+    "mkdir -p \"${cgroup}\""
+  ],
+  "vm_concierge.conf": [
+    "chown crosvm:crosvm \"${ARCVM_ADB_SYNC_DIR}\"",
+    "mkdir -p \"${ARCVM_ADB_SYNC_DIR}\"",
+    "rm -f /run/vm/dev_mode",
+    "touch /run/vm/dev_mode"
+  ],
+  "vpd-icc.conf": [
+    "mkdir -p /var/cache/display_profiles/vpd"
+  ],
+  "wilco_dtc.conf": [
+    "chown -R wilco_dtc:wilco_dtc \"${RUNTIME_PATH}\"",
+    "chown wilco_dtc:wilco_dtc \"${STORAGE_FILE}\"",
+    "mkdir \"${RUNTIME_PATH}\"",
+    "mkdir -p \"${STORAGE_PATH}\"",
+    "mkdir -p \"${cgroup_dir}\"",
+    "rm -r \"${RUNTIME_PATH}\""
+  ],
+  "wilco_dtc_supportd.conf": [
+    "chown -R wilco_dtc:wilco_dtc /run/wilco_dtc/",
+    "mkdir -p -m 550 \"${VPD_FIELDS_DIR}\"",
+    "mkdir -p -m 755 /run/wilco_dtc/grpc_sockets"
+  ],
+  "wpasupplicant.conf": [
+    "chown wpa:wpa /run/wpa_supplicant",
+    "mkdir -p -m 0750 /run/wpa_supplicant"
+  ]
+}

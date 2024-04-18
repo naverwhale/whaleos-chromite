@@ -1,0 +1,5 @@
+{
+  "ignore_data_collector_artifacts": true,
+  "package_name": "android-vm-tm",
+  "skip_commit": true
+}

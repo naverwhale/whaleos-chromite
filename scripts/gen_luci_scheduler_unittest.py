@@ -1,13 +1,12 @@
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Test gen_luci_scheduler."""
 
-from chromite.config import chromeos_config
-from chromite.lib import cros_test_lib
 from chromite.lib import config_lib
 from chromite.lib import config_lib_unittest
+from chromite.lib import cros_test_lib
 from chromite.scripts import gen_luci_scheduler
 
 
@@ -16,20 +15,20 @@ from chromite.scripts import gen_luci_scheduler
 
 
 class GenLuciSchedulerTest(cros_test_lib.MockTestCase):
-  """Tests for cbuildbot_launch script."""
-  def testSanityAgainstProd(self):
-    """Test we can generate a luci scheduler config with live data."""
-    # If it runs without crashing, we pass.
-    gen_luci_scheduler.genLuciSchedulerConfig(
-        config_lib.GetConfig(), chromeos_config.BranchScheduleConfig())
+    """Tests for cbuildbot_launch script."""
 
-  def testGenSchedulerJob(self):
-    """Test the job creation helper."""
-    build_config = config_lib_unittest.MockBuildConfig().apply(
-        schedule='funky schedule'
-    )
+    def testSanityAgainstProd(self):
+        """Test we can generate a luci scheduler config with live data."""
+        # If it runs without crashing, we pass.
+        gen_luci_scheduler.genLuciSchedulerConfig(config_lib.GetConfig())
 
-    expected = """
+    def testGenSchedulerJob(self):
+        """Test the job creation helper."""
+        build_config = config_lib_unittest.MockBuildConfig().apply(
+            schedule="funky schedule"
+        )
+
+        expected = """
 job {
   id: "amd64-generic-release"
   realm: "cbb-jobs"
@@ -37,7 +36,7 @@ job {
   schedule: "funky schedule"
   buildbucket: {
     server: "cr-buildbucket.appspot.com"
-    bucket: "luci.chromeos.general"
+    bucket: "general"
     builder: "LegacyRelease"
     tags: "cbb_branch:main"
     tags: "cbb_config:amd64-generic-release"
@@ -50,18 +49,18 @@ job {
 }
 """
 
-    result = gen_luci_scheduler.genSchedulerJob(build_config)
-    self.assertEqual(result, expected)
+        result = gen_luci_scheduler.genSchedulerJob(build_config)
+        self.assertEqual(result, expected)
 
-  def testGenSchedulerTriggerSimple(self):
-    """Test the trigger creation helper."""
-    trigger_name = 'simple'
-    repo = 'url://repo'
-    refs = ['refs/path']
-    path_regexps = ['path/regexps']
-    builds = ['test_build']
+    def testGenSchedulerTriggerSimple(self):
+        """Test the trigger creation helper."""
+        trigger_name = "simple"
+        repo = "url://repo"
+        refs = ["refs/path"]
+        path_regexps = ["path/regexps"]
+        builds = ["test_build"]
 
-    expected = """
+        expected = """
 trigger {
   id: "simple"
   realm: "cbb-jobs"
@@ -76,19 +75,20 @@ trigger {
 }
 """
 
-    result = gen_luci_scheduler.genSchedulerTrigger(
-        trigger_name, repo, refs, path_regexps, builds)
+        result = gen_luci_scheduler.genSchedulerTrigger(
+            trigger_name, repo, refs, path_regexps, builds
+        )
 
-    self.assertEqual(result, expected)
+        self.assertEqual(result, expected)
 
-  def testGenSchedulerTriggerComplex(self):
-    """Test the trigger creation helper."""
-    trigger_name = 'complex'
-    repo = 'url://repo'
-    refs = ['refs/path', 'refs/other_path']
-    builds = ['test_build_a', 'test_build_b']
+    def testGenSchedulerTriggerComplex(self):
+        """Test the trigger creation helper."""
+        trigger_name = "complex"
+        repo = "url://repo"
+        refs = ["refs/path", "refs/other_path"]
+        builds = ["test_build_a", "test_build_b"]
 
-    expected = """
+        expected = """
 trigger {
   id: "complex"
   realm: "cbb-jobs"
@@ -104,20 +104,20 @@ trigger {
 }
 """
 
-    result = gen_luci_scheduler.genSchedulerTrigger(
-        trigger_name, repo, refs, None, builds)
+        result = gen_luci_scheduler.genSchedulerTrigger(
+            trigger_name, repo, refs, None, builds
+        )
 
-    self.assertEqual(result, expected)
+        self.assertEqual(result, expected)
 
+    def testGenSchedulerBranched(self):
+        """Test the job creation helper."""
+        build_config = config_lib_unittest.MockBuildConfig().apply(
+            schedule_branch="mock_branch",
+            schedule="funky schedule",
+        )
 
-  def testGenSchedulerBranched(self):
-    """Test the job creation helper."""
-    build_config = config_lib_unittest.MockBuildConfig().apply(
-        schedule_branch='mock_branch',
-        schedule='funky schedule',
-    )
-
-    expected = """
+        expected = """
 job {
   id: "mock_branch-amd64-generic-release"
   realm: "cbb-jobs"
@@ -125,7 +125,7 @@ job {
   schedule: "funky schedule"
   buildbucket: {
     server: "cr-buildbucket.appspot.com"
-    bucket: "luci.chromeos.general"
+    bucket: "general"
     builder: "LegacyRelease"
     tags: "cbb_branch:mock_branch"
     tags: "cbb_config:amd64-generic-release"
@@ -138,17 +138,17 @@ job {
 }
 """
 
-    result = gen_luci_scheduler.genSchedulerJob(build_config)
-    self.assertEqual(result, expected)
+        result = gen_luci_scheduler.genSchedulerJob(build_config)
+        self.assertEqual(result, expected)
 
-  def testGenSchedulerWorkspaceBranch(self):
-    """Test the job creation helper."""
-    build_config = config_lib_unittest.MockBuildConfig().apply(
-        workspace_branch='work_branch',
-        schedule='funky schedule',
-    )
+    def testGenSchedulerWorkspaceBranch(self):
+        """Test the job creation helper."""
+        build_config = config_lib_unittest.MockBuildConfig().apply(
+            workspace_branch="work_branch",
+            schedule="funky schedule",
+        )
 
-    expected = """
+        expected = """
 job {
   id: "amd64-generic-release"
   realm: "cbb-jobs"
@@ -156,7 +156,7 @@ job {
   schedule: "funky schedule"
   buildbucket: {
     server: "cr-buildbucket.appspot.com"
-    bucket: "luci.chromeos.general"
+    bucket: "general"
     builder: "LegacyRelease"
     tags: "cbb_branch:main"
     tags: "cbb_config:amd64-generic-release"
@@ -171,115 +171,64 @@ job {
 }
 """
 
-    result = gen_luci_scheduler.genSchedulerJob(build_config)
-    self.assertEqual(result, expected)
+        result = gen_luci_scheduler.genSchedulerJob(build_config)
+        self.assertEqual(result, expected)
 
-  def testGenSchedulerGomaClientType(self):
-    """Test the job creation helper."""
-    build_config = config_lib_unittest.MockBuildConfig().apply(
-        goma_client_type='client_type',
-        schedule='funky schedule',
-    )
+    def testGenLuciSchedulerConfig(self):
+        """Test a full LUCI Scheduler config file."""
+        site_config = config_lib.SiteConfig()
 
-    expected = """
-job {
-  id: "amd64-generic-release"
-  realm: "cbb-jobs"
-  acl_sets: "default"
-  schedule: "funky schedule"
-  buildbucket: {
-    server: "cr-buildbucket.appspot.com"
-    bucket: "luci.chromeos.general"
-    builder: "LegacyRelease"
-    tags: "cbb_branch:main"
-    tags: "cbb_config:amd64-generic-release"
-    tags: "cbb_display_label:MockLabel"
-    tags: "cbb_goma_client_type:client_type"
-    properties: "cbb_branch:main"
-    properties: "cbb_config:amd64-generic-release"
-    properties: "cbb_display_label:MockLabel"
-    properties: "cbb_goma_client_type:client_type"
-    properties: "cbb_extra_args:[\\"--buildbot\\"]"
-  }
-}
-"""
+        site_config.Add(
+            "not_scheduled",
+            luci_builder="ReleaseBuilder",
+            display_label="MockLabel",
+        )
 
-    result = gen_luci_scheduler.genSchedulerJob(build_config)
-    self.assertEqual(result, expected)
+        site_config.Add(
+            "build_prod",
+            luci_builder="ReleaseBuilder",
+            display_label="MockLabel",
+            schedule="run once in a while",
+        )
 
-  def testGenLuciSchedulerConfig(self):
-    """Test a full LUCI Scheduler config file."""
-    site_config = config_lib.SiteConfig()
+        site_config.Add(
+            "build_tester",
+            luci_builder="TestBuilder",
+            display_label="TestLabel",
+            schedule="run daily",
+        )
 
-    site_config.Add(
-        'not_scheduled',
-        luci_builder='ReleaseBuilder',
-        display_label='MockLabel',
-    )
+        site_config.Add(
+            "build_triggered_a",
+            luci_builder="ReleaseBuilder",
+            display_label="MockLabel",
+            schedule="triggered",
+            triggered_gitiles=[
+                [
+                    "gitiles_url_a",
+                    ["ref_a", "ref_b"],
+                ],
+                [
+                    "gitiles_url_b",
+                    ["ref_c"],
+                ],
+            ],
+        )
 
-    site_config.Add(
-        'build_prod',
-        luci_builder='ReleaseBuilder',
-        display_label='MockLabel',
-        schedule='run once in a while',
-    )
+        site_config.Add(
+            "build_triggered_b",
+            luci_builder="ProdBuilder",
+            display_label="MockLabel",
+            schedule="triggered",
+            triggered_gitiles=[
+                [
+                    "gitiles_url_b",
+                    ["ref_c"],
+                ]
+            ],
+        )
 
-    site_config.Add(
-        'build_tester',
-        luci_builder='TestBuilder',
-        display_label='TestLabel',
-        schedule='run daily',
-    )
-
-    site_config.Add(
-        'build_triggered_a',
-        luci_builder='ReleaseBuilder',
-        display_label='MockLabel',
-        schedule='triggered',
-        triggered_gitiles=[[
-            'gitiles_url_a',
-            ['ref_a', 'ref_b'],
-        ], [
-            'gitiles_url_b',
-            ['ref_c'],
-        ]],
-    )
-
-    site_config.Add(
-        'build_triggered_b',
-        luci_builder='ProdBuilder',
-        display_label='MockLabel',
-        schedule='triggered',
-        triggered_gitiles=[[
-            'gitiles_url_b',
-            ['ref_c'],
-        ]],
-    )
-
-    default_config = config_lib.GetConfig().GetDefault()
-
-    branch_configs = [
-        default_config.derive(
-            name='branch_tester',
-            luci_builder='TestBuilder',
-            display_label='TestLabel',
-            schedule='run daily',
-            schedule_branch='test-branch',
-        ),
-        default_config.derive(
-            name='branch_tester_triggered',
-            luci_builder='TestBuilder',
-            display_label='TestLabel',
-            schedule='run daily',
-            schedule_branch='test-branch',
-            triggered_gitiles=[[
-                'gitiles_url_a',
-                ['ref_a', 'ref_b'],
-            ]],
-        ),
-    ]
-
-    expected = """# Defines buckets on luci-scheduler.appspot.com.
+        expected = """# Defines buckets on luci-scheduler.appspot.com.
 #
 # For schema of this file and documentation see ProjectConfig message in
 # https://github.com/luci/luci-go/blob/HEAD/scheduler/appengine/messages/config.proto
@@ -320,7 +269,6 @@ trigger {
     refs: "ref_b"
   }
   triggers: "build_triggered_a"
-  triggers: "test-branch-branch_tester_triggered"
 }
 
 trigger {
@@ -343,7 +291,7 @@ job {
   schedule: "run once in a while"
   buildbucket: {
     server: "cr-buildbucket.appspot.com"
-    bucket: "luci.chromeos.general"
+    bucket: "general"
     builder: "ReleaseBuilder"
     tags: "cbb_branch:main"
     tags: "cbb_config:build_prod"
@@ -362,7 +310,7 @@ job {
   schedule: "run daily"
   buildbucket: {
     server: "cr-buildbucket.appspot.com"
-    bucket: "luci.chromeos.general"
+    bucket: "general"
     builder: "TestBuilder"
     tags: "cbb_branch:main"
     tags: "cbb_config:build_tester"
@@ -381,7 +329,7 @@ job {
   schedule: "triggered"
   buildbucket: {
     server: "cr-buildbucket.appspot.com"
-    bucket: "luci.chromeos.general"
+    bucket: "general"
     builder: "ReleaseBuilder"
     tags: "cbb_branch:main"
     tags: "cbb_config:build_triggered_a"
@@ -400,7 +348,7 @@ job {
   schedule: "triggered"
   buildbucket: {
     server: "cr-buildbucket.appspot.com"
-    bucket: "luci.chromeos.general"
+    bucket: "general"
     builder: "ProdBuilder"
     tags: "cbb_branch:main"
     tags: "cbb_config:build_triggered_b"
@@ -411,46 +359,7 @@ job {
     properties: "cbb_extra_args:[\\"--buildbot\\"]"
   }
 }
-
-job {
-  id: "test-branch-branch_tester"
-  realm: "cbb-jobs"
-  acl_sets: "default"
-  schedule: "run daily"
-  buildbucket: {
-    server: "cr-buildbucket.appspot.com"
-    bucket: "luci.chromeos.general"
-    builder: "TestBuilder"
-    tags: "cbb_branch:test-branch"
-    tags: "cbb_config:branch_tester"
-    tags: "cbb_display_label:TestLabel"
-    properties: "cbb_branch:test-branch"
-    properties: "cbb_config:branch_tester"
-    properties: "cbb_display_label:TestLabel"
-    properties: "cbb_extra_args:[\\"--buildbot\\"]"
-  }
-}
-
-job {
-  id: "test-branch-branch_tester_triggered"
-  realm: "cbb-jobs"
-  acl_sets: "default"
-  schedule: "run daily"
-  buildbucket: {
-    server: "cr-buildbucket.appspot.com"
-    bucket: "luci.chromeos.general"
-    builder: "TestBuilder"
-    tags: "cbb_branch:test-branch"
-    tags: "cbb_config:branch_tester_triggered"
-    tags: "cbb_display_label:TestLabel"
-    properties: "cbb_branch:test-branch"
-    properties: "cbb_config:branch_tester_triggered"
-    properties: "cbb_display_label:TestLabel"
-    properties: "cbb_extra_args:[\\"--buildbot\\"]"
-  }
-}
 """
-    result = gen_luci_scheduler.genLuciSchedulerConfig(
-        site_config, branch_configs)
+        result = gen_luci_scheduler.genLuciSchedulerConfig(site_config)
 
-    self.assertEqual(result, expected)
+        self.assertEqual(result, expected)

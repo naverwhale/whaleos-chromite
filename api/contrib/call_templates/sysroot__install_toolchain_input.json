@@ -1,10 +1,4 @@
 {
-  "sysroot": {
-    "buildTarget": {
-      "name": "%(build_target)s"
-    },
-    "path": "/build/%(build_target)s"
-  },
   "chroot": {
     "env": {
       "use_flags": [
@@ -13,5 +7,11 @@
         }
       ]
     }
+  },
+  "sysroot": {
+    "buildTarget": {
+      "name": "%(build_target)s"
+    },
+    "path": "/build/%(build_target)s"
   }
 }

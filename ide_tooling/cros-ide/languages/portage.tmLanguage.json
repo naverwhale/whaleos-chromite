@@ -1,0 +1,28 @@
+{
+  "name": "portage",
+  "scopeName": "source.portage",
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#package"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.portage",
+      "begin": "^#",
+      "end": "$"
+    },
+    "package": {
+      "name": "variable.portage",
+      "match": "^([<>=~]*)\\S+",
+      "captures": {
+        "1": {
+          "name": "keyword.operator.portage"
+        }
+      }
+    }
+  }
+}

@@ -2,6 +2,10 @@
 
 This directory contains the core CLI system.
 
+This document covers the common APIs chromite provides when writing tools.
+It does not get into CLI best practices as the [CLI Guidelines] document covers
+that more generally already.
+
 [TOC]
 
 ## Adding a new command
@@ -11,7 +15,7 @@ the `cros_{command_name}.py` format where the command can live.
 
 The command class's implementation _must_:
 *   Be a subclass of `cli.command.Command`
-*   Have a `@command.CommandDecorator('command-name')` decorator on the class
+*   Have a `@command.command_decorator('command-name')` decorator on the class
 *   Define an `EPILOG` class constant
 *   Implement the `@classmethod` `AddParser(cls, parser)`
 *   Implement `Run(self)`
@@ -41,6 +45,12 @@ which can be used with `type='custom_type_name'`.
     BuildTarget instance.
 *   date: Parse the argument as a Y-m-d formatted date.
 *   path: Expands ~/ paths and then standardizes to the real path.
+*   path_exists: Expands ~/ paths and standardizes to the real path,
+    then checks that the path exists.
+*   file_exists: Expands ~/ paths and standardizes to the real path,
+    then checks that the path exists and is a file.
+*   dir_exists: Expands ~/ paths and standardizes to the real path,
+    then checks that the path exists and is a directory.
 *   gs_path: Processes all known GS urls and provides the equivalent gs:// url.
 *   local_or_gs_path: Processes the argument as a 'path' or a 'gs_path',
     as needed.
@@ -65,31 +75,32 @@ Argument --foo is deprecated: Use --bar instead!
 
 ### Defined Arguments
 
-*   --log-level: The minimum logging level (default: notice).
-*   --log-format: Change log line format.
-*   -v/--verbose: Sets the verbose option to true and sets the log-level to
+`logging=True` (default) enables standard logging options:
+
+*   `--log-level=<level>`: The minimum logging level (default: info).
+*   `--log-format=<format>`: Change log line format.
+*   `-v`, `--verbose`: Sets the verbose option to true and sets the log-level to
     info.
-*   --debug: Sets verbose and debug options to true and sets the log-level to
+*   `--debug`: Sets verbose and debug options to true and sets the log-level to
     debug.
-*   --nocolor: Disable log coloring.
-*   --cache-dir: Override the cache directory when caching is enabled in the
-    parser.
+*   `--color`, `--no-color`: Control log coloring.
 
-## Argument Standards
+The `caching=` option (disabled by default) enables the common cache dir, and
+exposes the options:
 
-There are only a few style rules on top of the standard rules imposed by the
-python `ArgumentParser`.
-Dashes should be preferred over underscores, e.g. `--argument-name`,
-**not** `--argument_name`.
-If there is historical context for `--argument_name`, it *may* be included,
-but `--argument-name` *must* also be included.
+*   `--cache-dir=<dir>`: Override the cache directory.
 
-For negative flag arguments, use --no-foo instead of --nofoo, and store it to
-foo. e.g.
+The `dryrun=` option (disabled by default) enables:
 
-```python
-parser.add_argument('--no-foo', dest='foo', action='store_false', default=True)
-```
+*   `-n`, `--dry-run`: Don't run commands, and show what would be done.
+
+The `filter=` option (disabled by default) sets up a generic filter for tools
+that process user-specified paths.  This filter can be accessed via `.filter`
+in the parsed options object; see `chromite.utils.path_filter.PathFilter` for
+more details.  It also enables:
+
+*   `--include=<pattern>`: Paths to include in the filter.
+*   `--exclude=<pattern>`: Paths to exclude from the filter.
 
 ### Standard Arguments
 
@@ -103,11 +114,7 @@ form they must have.
 |---|---|---|
 | -b | --build-target | [Build Target](#Build-Target) |
 | -d | --device | [Device](#Device) |
-| -f | --force | [Force](#Force) |
-| -j | --jobs | [Jobs](#Jobs) |
-| -n | --dry-run | [Dry Run](#Dry-Run) |
 | | package(s) | [Packages](#Packages) |
-| -y | --yes | [Yes](#Yes) |
 
 #### Build Target
 
@@ -138,53 +145,6 @@ parser.add_argument(
                                    commandline.DEVICE_SCHEME_FILE]))
 ```
 
-#### Dry Run
-
-A dry-run of a script should log information about steps it would be taking
-without executing operations that mutate anything.
-Implementing a dry-run for your script is very strongly recommended.
-A dry-run allows developers to more quickly experiment with and verify their
-usage and understanding of your script, and empowers them to make mistakes
-without worrying about consequences.
-
-There are tentative plans to implement the dry-run argument as a default
-on our ArgumentParser subclass, making it available for all the commands.
-If done, any existing inclusions will be converted, so until then please feel
-free to add it to your script.
-
-```python
-parser.add_argument(
-    '-n',
-    '--dryrun',
-    '--dry-run',
-    dest='dryrun',
-    action='store_true',
-    default=False)
-```
-
-#### Force
-
-The force argument should only be used when there's an operation to "force"
-to complete that would otherwise abort, e.g. deleting an existing X, if it
-exists, to create a new X.
-If the operation would prompt the user, then [--yes](#Yes) is the correct option.
-
-```python
-parser.add_argument('-f', '--force', action='store_true', default=False)
-```
-
-#### Jobs
-
-This argument is used to specify maximum parallelism for concurrent tasks.
-The default should be unlimited when feasible, or the machine's CPU count
-when not.
-If unsure, lean towards unlimited and adjust if/when it is a problem.
-In particular, this helps avoid chained calls from unexpectedly being limited.
-
-```python
-parser.add_argument('-j', '--jobs', type=int, default=0)
-```
-
 #### Packages
 
 The package(s) argument should be a positional argument taking one or more
@@ -196,11 +156,4 @@ dependent on the script itself.
 parser.add_argument('packages', nargs='+')
 ```
 
-#### Yes
-
-The yes option is a pretty common argument to allow the user to skip manually
-confirming prompts and instead assume the user confirmed each case.
-
-```python
-parser.add_argument('-y', '--yes', action='store_true', default=False)
-```
+[CLI Guidelines]: /docs/cli-guidelines.md

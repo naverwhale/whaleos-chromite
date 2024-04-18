@@ -1,4 +1,4 @@
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -28,55 +28,65 @@ from chromite.lib import image_lib
 
 
 def GetParser():
-  """Build the Argument Parser."""
-  parser = commandline.ArgumentParser(description=__doc__)
+    """Build the Argument Parser."""
+    parser = commandline.ArgumentParser(description=__doc__)
 
-  parser.add_argument('--board', help='The board to test an image for.')
-  # Avoiding type='path' to allow the use of `./` to distinguish between a
-  # local image (e.g. `./image_name.bin`) and a basename (`image_name.bin`) in
-  # the board's build directory. The `./` would be normalized out of a
-  # type='path' argument, making it look like it's a basename.
-  parser.add_argument('--image',
-                      help='Source release image to use (recovery_image.bin by '
-                           'default). May be a path to an image or just the '
-                           'basename of the image if a board is also provided.')
-  parser.add_argument('--baselines', type='path',
-                      help='Directory to load security baselines from (default '
-                           'from cros-signing).')
-  parser.add_argument('--vboot-hash',
-                      help='The git rev of the vboot tree to checkout (default '
-                           'to the signer hash).')
+    parser.add_argument("--board", help="The board to test an image for.")
+    # Avoiding type='path' to allow the use of `./` to distinguish between a
+    # local image (e.g. `./image_name.bin`) and a basename (`image_name.bin`) in
+    # the board's build directory. The `./` would be normalized out of a
+    # type='path' argument, making it look like it's a basename.
+    parser.add_argument(
+        "--image",
+        help="Source release image to use (recovery_image.bin by "
+        "default). May be a path to an image or just the "
+        "basename of the image if a board is also provided.",
+    )
+    parser.add_argument(
+        "--baselines",
+        type="path",
+        help="Directory to load security baselines from (default "
+        "from cros-signing).",
+    )
+    parser.add_argument(
+        "--vboot-hash",
+        help="The git rev of the vboot tree to checkout (default "
+        "to the signer hash).",
+    )
 
-  return parser
+    return parser
 
 
 def _ParseArgs(argv):
-  """Parse and validate arguments."""
-  parser = GetParser()
-  opts = parser.parse_args(argv)
+    """Parse and validate arguments."""
+    parser = GetParser()
+    opts = parser.parse_args(argv)
 
-  # Need the board if no image provided or only the basename is provided so
-  # we can build out the full path to an image file.
-  opts.board = opts.board or cros_build_lib.GetDefaultBoard()
-  try:
-    opts.image = image_lib.BuildImagePath(opts.board, opts.image)
-  except image_lib.ImageDoesNotExistError as e:
-    # Replace |arg| with --arg, otherwise messages still relevant.
-    message = re.sub(r'\|(\w+)\|', r'--\1', str(e))
-    parser.error(message)
+    # Need the board if no image provided or only the basename is provided so
+    # we can build out the full path to an image file.
+    opts.board = opts.board or cros_build_lib.GetDefaultBoard()
+    try:
+        opts.image = image_lib.BuildImagePath(opts.board, opts.image)
+    except image_lib.ImageDoesNotExistError as e:
+        # Replace |arg| with --arg, otherwise messages still relevant.
+        message = re.sub(r"\|(\w+)\|", r"--\1", str(e))
+        parser.error(message)
 
-  opts.Freeze()
-  return opts
+    opts.Freeze()
+    return opts
 
 
 def main(argv):
-  cros_build_lib.AssertInsideChroot()
-  opts = _ParseArgs(argv)
-  try:
-    success = image_lib.SecurityTest(board=opts.board, image=opts.image,
-                                     baselines=opts.baselines,
-                                     vboot_hash=opts.vboot_hash)
-  except image_lib.Error as e:
-    cros_build_lib.Die(e)
-  else:
-    return 0 if success else 1
+    cros_build_lib.AssertInsideChroot()
+    opts = _ParseArgs(argv)
+    try:
+        success = image_lib.SecurityTest(
+            board=opts.board,
+            image=opts.image,
+            baselines=opts.baselines,
+            vboot_hash=opts.vboot_hash,
+        )
+    except image_lib.Error as e:
+        cros_build_lib.Die(e)
+    else:
+        return 0 if success else 1

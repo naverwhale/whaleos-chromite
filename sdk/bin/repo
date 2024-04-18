@@ -1,0 +1,17 @@
+#!/bin/bash
+# Copyright 2023 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+cat <<"EOF" 1>&2
+You're trying to use `repo` inside the ChromiumOS SDK. That was deprecated, and
+`repo` has been removed from the SDK. Please run your command outside the
+SDK. If you find bugs with `repo` outside the SDK (e.g., with pre-upload
+checks), please file a Build Infra bug (go/cros-build-bug /
+https://issuetracker.google.com/issues/new?component=1037860).
+
+For more info, see: https://issuetracker.google.com/270994985
+
+EOF
+
+exit 1

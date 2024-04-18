@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+# Copyright 2013 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -25,11 +25,11 @@ function run() {
   local start_time=$(date +%s)
 
   echo "Running '${description}' now, output to ${logfile}"
-  ${cmd} >& "${logfile}"
+  ${cmd} >&"${logfile}"
   local result=$?
 
   local end_time=$(date +%s)
-  local elapsed_seconds=$(( end_time - start_time ))
+  local elapsed_seconds=$((end_time - start_time))
   echo "Running '${description}' took ${elapsed_seconds}s"
 
   if [[ "${result}" -ne 0 ]]; then
@@ -43,7 +43,7 @@ function nuke_dir() {
   local dir="${1}"
   if [[ -d "${dir}" ]]; then
     echo "Deleting existing ${dir}."
-    rm -rf "${dir}" >& /dev/null
+    rm -rf "${dir}" >&/dev/null
   fi
   if [[ -d "${dir}" ]]; then
     echo "Failed to delete ${dir}."
@@ -58,7 +58,7 @@ function sudo_nuke_dir() {
   local dir="${1}"
   if [[ -d "${dir}" ]]; then
     echo "Deleting existing ${dir}, using sudo."
-    sudo rm -rf "${dir}" >& /dev/null
+    sudo rm -rf "${dir}" >&/dev/null
   fi
   if [[ -d "${dir}" ]]; then
     echo "Failed to delete ${dir}, using sudo!"
@@ -93,7 +93,7 @@ function nuke_build() {
 function nuke_chroot() {
   if [[ -d "chroot" ]]; then
     echo "Deleting existing chroot"
-    ${CROS_SDK} --delete >& /dev/null
+    ${CROS_SDK} --delete >&/dev/null
   fi
   nuke_cache
 }
@@ -135,7 +135,7 @@ function build_packages_plain() {
   nuke_cache
   nuke_build
 
-  local cmd="${CROS_SDK} -- ./build_packages --board=${BOARD}"
+  local cmd="${CROS_SDK} -- build_packages --board=${BOARD}"
   run "build_packages plain" "${cmd}"
 }
 
@@ -144,14 +144,14 @@ function build_packages_source() {
   nuke_cache
   nuke_build
 
-  local cmd="${CROS_SDK} -- ./build_packages --board=${BOARD} --nousepkg"
+  local cmd="${CROS_SDK} -- build_packages --board=${BOARD} --no-usepkg"
   run "build_packages source" "${cmd}"
 }
 
 function build_image() {
   echo
 
-  local cmd="${CROS_SDK} -- ./build_image --board=${BOARD}"
+  local cmd="${CROS_SDK} -- build_image --board=${BOARD}"
   run "build_image" "${cmd}"
 }
 
@@ -180,9 +180,9 @@ main() {
   run_count=0
   while [[ $# -gt 0 ]]; do
     case $1 in
-    -h|--help)    usage;;
-    -*)           usage "unknown option $1";;
-    *)            run_count="$1";;
+      -h | --help) usage ;;
+      -*) usage "unknown option $1" ;;
+      *) run_count="$1" ;;
     esac
     shift
   done
@@ -200,7 +200,7 @@ main() {
   echo "If that is not okay then kill this script now."
   sleep 10
 
-  for (( i=1; i<=${run_count}; i++ )); do
+  for ((i = 1; i <= ${run_count}; i++)); do
     echo
     echo "*** Starting run ${i} of ${run_count} now. ***"
     echo

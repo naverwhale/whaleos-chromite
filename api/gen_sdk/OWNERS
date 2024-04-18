@@ -1,6 +1,6 @@
-# Primary reviewers
-include chromiumos/chromite:/OWNERS.build
+# Primary reviewers.
+include chromiumos/owners:v1:/infra/OWNERS.build
 
-# Other teams who need to regenerate these files sometimes
+# Other teams who need to regenerate these files sometimes.
 include chromiumos/chromite:/OWNERS.ci
 include chromiumos/chromite:/OWNERS.testplatform

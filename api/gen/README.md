@@ -1,7 +1,10 @@
 #### api/gen
 
-Generated protobuf messages.
+Generated protobuf messages for use with chromite's vendored copy of the
+protobuf library.
 
 **Do not edit any files in this package directly.**
 
-The proto can be compiled using the `compile_build_api_proto` script in the api directory.
+Edit the protos in `~/chromiumos/chromite/infra/proto/src/chromite/api` and
+then regenerate the python files by running the
+`~/chromiumos/chromite/api/compile_build_api_proto` script.

@@ -6,6 +6,11 @@ This file contains more in depth information about interacting with the SDK
 walk-through of the steps to set up an endpoint that runs inside the SDK,
 and is the recommended starting point if you're just getting started.
 
+## Chroot Assert Options
+
+Where an endpoint is run is determined by the Chroot Assert Service and Method
+Options.
+See the [Build API Proto Reference](./build_api_proto.md) for more information.
 
 ## Overview: The "Path" Messages
 

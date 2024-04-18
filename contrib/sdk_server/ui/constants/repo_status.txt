@@ -1,0 +1,10 @@
+project chromite/                               branch sdk_frontend
+ --	contrib/app.py
+ --	contrib/poc_server.py
+ --	contrib/sdk_frontend/repo_status.txt
+ --	contrib/templates/index.html
+ -m	lib/luci/prpc/test/test.proto
+ -m	lib/paygen/testdata/paygen.json
+ -m	lib/perf_dashboard_config.json
+ -m	lib/testdata/androidbuild/test_creds_authorized_user.json
+ -m	lib/testdata/androidbuild/test_creds_service_account.json

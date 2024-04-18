@@ -1,4 +1,4 @@
-# Copyright (c) 2011-2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2011-2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -15,133 +15,157 @@ from chromite.lib import patch as cros_patch
 
 
 def ChromiteFilter(patch):
-  """Used with FilterFn to isolate patches to chromite."""
-  return patch.project == constants.CHROMITE_PROJECT
+    """Used with FilterFn to isolate patches to chromite."""
+    return patch.project == constants.CHROMITE_PROJECT
 
 
 def ExtManifestFilter(patch):
-  """Used with FilterFn to isolate patches to the external manifest."""
-  return patch.project == config_lib.GetSiteParams().MANIFEST_PROJECT
+    """Used with FilterFn to isolate patches to the external manifest."""
+    return patch.project == config_lib.GetSiteParams().MANIFEST_PROJECT
 
 
 def IntManifestFilter(patch):
-  """Used with FilterFn to isolate patches to the internal manifest."""
-  return patch.project == config_lib.GetSiteParams().MANIFEST_INT_PROJECT
+    """Used with FilterFn to isolate patches to the internal manifest."""
+    return patch.project == config_lib.GetSiteParams().MANIFEST_INT_PROJECT
 
 
 def ManifestFilter(patch):
-  """Used with FilterFn to isolate patches to the manifest."""
-  return ExtManifestFilter(patch) or IntManifestFilter(patch)
+    """Used with FilterFn to isolate patches to the manifest."""
+    return ExtManifestFilter(patch) or IntManifestFilter(patch)
 
 
 def BranchFilter(branch, patch):
-  """Used with FilterFn to isolate patches based on a specific upstream."""
-  return patch.tracking_branch == branch
+    """Used with FilterFn to isolate patches based on a specific upstream."""
+    return patch.tracking_branch == branch
 
 
-class TrybotPatchPool(object):
-  """Represents patches specified by the user to test."""
-  def __init__(self, gerrit_patches=(), local_patches=(), remote_patches=()):
-    self.gerrit_patches = tuple(gerrit_patches)
-    self.local_patches = tuple(local_patches)
-    self.remote_patches = tuple(remote_patches)
+class TrybotPatchPool:
+    """Represents patches specified by the user to test."""
 
-  def __bool__(self):
-    """Returns True if the pool has any patches."""
-    return any([self.gerrit_patches, self.local_patches, self.remote_patches])
+    def __init__(self, gerrit_patches=(), local_patches=(), remote_patches=()):
+        self.gerrit_patches = tuple(gerrit_patches)
+        self.local_patches = tuple(local_patches)
+        self.remote_patches = tuple(remote_patches)
 
-  # Python 2 glue.
-  __nonzero__ = __bool__
+    def __bool__(self):
+        """Returns True if the pool has any patches."""
+        return any(
+            [self.gerrit_patches, self.local_patches, self.remote_patches]
+        )
 
-  def Filter(self, **kwargs):
-    """Returns a new pool with only patches that match constraints.
+    # Python 2 glue.
+    __nonzero__ = __bool__
 
-    Args:
-      **kwargs: constraints in the form of attr=value.  I.e.,
+    def Filter(self, **kwargs):
+        """Returns a new pool with only patches that match constraints.
+
+        Args:
+            **kwargs: constraints in the form of attr=value.  I.e.,
                 project='chromiumos/chromite', tracking_branch='master'.
-    """
-    def AttributeFilter(patch):
-      for key in kwargs:
-        if getattr(patch, key, object()) != kwargs[key]:
-          return False
-      return True
+        """
 
-    return self.FilterFn(AttributeFilter)
+        def AttributeFilter(patch):
+            # TODO(b/236161656): Fix.
+            # pylint: disable-next=consider-using-dict-items
+            for key in kwargs:
+                if getattr(patch, key, object()) != kwargs[key]:
+                    return False
+            return True
 
-  def FilterFn(self, filter_fn, negate=False):
-    """Returns a new pool with only patches that match constraints.
+        return self.FilterFn(AttributeFilter)
 
-    Args:
-      filter_fn: Functor that accepts a 'patch' argument, and returns whether to
-                 include the patch in the results.
-      negate: Return patches that don't pass the filter_fn.
-    """
-    f = filter_fn
-    if negate:
-      f = lambda p: not filter_fn(p)
+    def FilterFn(self, filter_fn, negate=False):
+        """Returns a new pool with only patches that match constraints.
 
-    return self.__class__(
-        gerrit_patches=(x for x in self.gerrit_patches if f(x)),
-        local_patches=(x for x in self.local_patches if f(x)),
-        remote_patches=(x for x in self.remote_patches if f(x)))
+        Args:
+            filter_fn: Functor that accepts a 'patch' argument, and returns
+                whether to include the patch in the results.
+            negate: Return patches that don't pass the filter_fn.
+        """
+        f = filter_fn
+        if negate:
+            f = lambda p: not filter_fn(p)
 
-  def FilterManifest(self, negate=False):
-    """Return a patch pool with only patches to the manifest."""
-    return self.FilterFn(ManifestFilter, negate=negate)
+        return self.__class__(
+            gerrit_patches=(x for x in self.gerrit_patches if f(x)),
+            local_patches=(x for x in self.local_patches if f(x)),
+            remote_patches=(x for x in self.remote_patches if f(x)),
+        )
 
-  def FilterIntManifest(self, negate=False):
-    """Return a patch pool with only patches to the internal manifest."""
-    return self.FilterFn(IntManifestFilter, negate=negate)
+    def FilterManifest(self, negate=False):
+        """Return a patch pool with only patches to the manifest."""
+        return self.FilterFn(ManifestFilter, negate=negate)
 
-  def FilterExtManifest(self, negate=False):
-    """Return a patch pool with only patches to the external manifest."""
-    return self.FilterFn(ExtManifestFilter, negate=negate)
+    def FilterIntManifest(self, negate=False):
+        """Return a patch pool with only patches to the internal manifest."""
+        return self.FilterFn(IntManifestFilter, negate=negate)
 
-  def FilterBranch(self, branch, negate=False):
-    """Return a patch pool with only patches based on a particular branch."""
-    return self.FilterFn(functools.partial(BranchFilter, branch), negate=negate)
+    def FilterExtManifest(self, negate=False):
+        """Return a patch pool with only patches to the external manifest."""
+        return self.FilterFn(ExtManifestFilter, negate=negate)
 
-  def __iter__(self):
-    for source in [self.local_patches, self.remote_patches,
-                   self.gerrit_patches]:
-      for patch in source:
-        yield patch
+    def FilterBranch(self, branch, negate=False):
+        """Return a patch pool with only patches from a particular branch."""
+        return self.FilterFn(
+            functools.partial(BranchFilter, branch), negate=negate
+        )
 
-  @classmethod
-  def FromOptions(cls, gerrit_patches=None, local_patches=None, sourceroot=None,
-                  remote_patches=None):
-    """Generate patch objects from passed in options.
+    def __iter__(self):
+        for source in [
+            self.local_patches,
+            self.remote_patches,
+            self.gerrit_patches,
+        ]:
+            for patch in source:
+                yield patch
 
-    Args:
-      gerrit_patches: Gerrit ids that gerrit.GetGerritPatchInfo accepts.
-      local_patches: Local ids that cros_patch.PrepareLocalPatches accepts.
-      sourceroot: The source repository to look up |local_patches|.
-      remote_patches: Remote ids that cros_patch.PrepareRemotePatches accepts.
+    @classmethod
+    def FromOptions(
+        cls,
+        gerrit_patches=None,
+        local_patches=None,
+        sourceroot=None,
+        remote_patches=None,
+    ):
+        """Generate patch objects from passed in options.
 
-    Returns:
-      A TrybotPatchPool object.
+        Args:
+            gerrit_patches: Gerrit ids that gerrit.GetGerritPatchInfo accepts.
+            local_patches: Local ids that cros_patch.PrepareLocalPatches
+                accepts.
+            sourceroot: The source repository to look up |local_patches|.
+            remote_patches: Remote ids that cros_patch.PrepareRemotePatches
+                accepts.
 
-    Raises:
-      gerrit.GerritException, cros_patch.PatchException
-    """
-    if gerrit_patches:
-      gerrit_patches = gerrit.GetGerritPatchInfo(gerrit_patches)
-      for patch in gerrit_patches:
-        if patch.IsAlreadyMerged():
-          logging.warning('Patch %s has already been merged.', patch)
-    else:
-      gerrit_patches = ()
+        Returns:
+            A TrybotPatchPool object.
 
-    if local_patches:
-      manifest = git.ManifestCheckout.Cached(sourceroot)
-      local_patches = cros_patch.PrepareLocalPatches(manifest, local_patches)
-    else:
-      local_patches = ()
+        Raises:
+            gerrit.GerritException, cros_patch.PatchException
+        """
+        if gerrit_patches:
+            gerrit_patches = gerrit.GetGerritPatchInfo(gerrit_patches)
+            for patch in gerrit_patches:
+                if patch.IsAlreadyMerged():
+                    logging.warning("Patch %s has already been merged.", patch)
+        else:
+            gerrit_patches = ()
 
-    if remote_patches:
-      remote_patches = cros_patch.PrepareRemotePatches(remote_patches)
-    else:
-      remote_patches = ()
+        if local_patches:
+            manifest = git.ManifestCheckout.Cached(sourceroot)
+            local_patches = cros_patch.PrepareLocalPatches(
+                manifest, local_patches
+            )
+        else:
+            local_patches = ()
 
-    return cls(gerrit_patches=gerrit_patches, local_patches=local_patches,
-               remote_patches=remote_patches)
+        if remote_patches:
+            remote_patches = cros_patch.PrepareRemotePatches(remote_patches)
+        else:
+            remote_patches = ()
+
+        return cls(
+            gerrit_patches=gerrit_patches,
+            local_patches=local_patches,
+            remote_patches=remote_patches,
+        )

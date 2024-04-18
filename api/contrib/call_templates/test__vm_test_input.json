@@ -2,11 +2,11 @@
   "build_target": {
     "name": "%(build_target)s"
   },
-  "vm_path": {
-    "path": "/tmp/vm.bin",
-    "location": 2
-  },
   "test_harness": 2,
+  "vm_path": {
+    "location": 2,
+    "path": "/tmp/vm.bin"
+  },
   "vm_tests": [
     {
       "pattern": "suite:smoke"

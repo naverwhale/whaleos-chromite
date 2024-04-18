@@ -1,4 +1,4 @@
-# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+# Copyright 2013 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -22,34 +22,36 @@ from chromite.lib import osutils
 
 
 def GetParser():
-  """Creates the argparse parser."""
-  parser = commandline.ArgumentParser(description=__doc__)
-  parser.add_argument('--boto', type='path', help='Path to boto auth file.')
-  parser.add_argument('uri', type='gs_path',
-                      help='Google Storage URI to download')
-  parser.add_argument('filename', type='path',
-                      help='Location to store the file.')
-  return parser
+    """Creates the argparse parser."""
+    parser = commandline.ArgumentParser(description=__doc__)
+    parser.add_argument("--boto", type="path", help="Path to boto auth file.")
+    parser.add_argument(
+        "uri", type="gs_path", help="Google Storage URI to download"
+    )
+    parser.add_argument(
+        "filename", type="path", help="Location to store the file."
+    )
+    return parser
 
 
 def Copy(ctx, uri, filename):
-  """Run the copy using a temp file."""
-  temp_path = '%s.tmp' % filename
-  osutils.SafeUnlink(temp_path)
-  try:
-    ctx.Copy(uri, temp_path, retries=10)
-    shutil.move(temp_path, filename)
-  finally:
+    """Run the copy using a temp file."""
+    temp_path = "%s.tmp" % filename
     osutils.SafeUnlink(temp_path)
+    try:
+        ctx.Copy(uri, temp_path)
+        shutil.move(temp_path, filename)
+    finally:
+        osutils.SafeUnlink(temp_path)
 
 
 def main(argv):
-  parser = GetParser()
-  options = parser.parse_args(argv)
-  options.Freeze()
-  ctx = gs.GSContext(boto_file=options.boto)
-  try:
-    Copy(ctx, options.uri, options.filename)
-  except gs.GSContextException as ex:
-    # Hide the stack trace using Die.
-    cros_build_lib.Die('%s', ex)
+    parser = GetParser()
+    options = parser.parse_args(argv)
+    options.Freeze()
+    ctx = gs.GSContext(boto_file=options.boto)
+    try:
+        Copy(ctx, options.uri, options.filename)
+    except gs.GSContextException as ex:
+        # Hide the stack trace using Die.
+        cros_build_lib.Die("%s", ex)

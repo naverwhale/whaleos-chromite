@@ -1,11 +1,15 @@
-# Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Print the environment whitelist."""
+"""Print the environment allowlist."""
+
+import sys
 
 from chromite.lib import constants
 
 
-def main(_argv):
-  print(' '.join(constants.CHROOT_ENVIRONMENT_WHITELIST))
+def main(argv):
+    if argv:
+        sys.exit(f"{sys.argv[0]}: {__doc__}")
+    print(" ".join(constants.CHROOT_ENVIRONMENT_ALLOWLIST))

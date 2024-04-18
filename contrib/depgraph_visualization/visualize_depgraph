@@ -1,0 +1,45 @@
+#!/bin/bash
+# Copyright 2023 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+cd "$(dirname "$(realpath "${0}")")" || exit
+
+set -e
+
+# The depgraph visualizer creates a bespoke virtual env independent of vpython
+# because the viz deps are tricky to maintain. E.g., numpy's Fortran deps
+# relying on specific glibc, and packages wanting Python >= 3.9. Here, do a
+# simple check for changes to the visualizer source, or install if the virtual
+# env does not exist yet.
+should_upgrade() {
+  TARGET=my_visualizations/bin/visualize_depgraph
+  DEPS=(depgraph_visualization requirements.txt)
+  if [[ ! -x "${TARGET}" ]]; then
+    return 0
+  fi
+  if [[ -n "$(find "${DEPS[@]}" -newer "${TARGET}" -print -quit)" ]]; then
+    return 0
+  fi
+  return 1
+}
+
+install() {
+  INSTALL_OPTIONS=(--quiet --log my_visualizations/install.log install)
+  echo "Updating visualize_depgraph venv.."
+  python3 -m venv my_visualizations
+  source my_visualizations/bin/activate
+
+  # Upgrade pip to avoid a red herring warning about it not being up to date.
+  pip "${INSTALL_OPTIONS[@]}" --upgrade pip
+  pip "${INSTALL_OPTIONS[@]}" -r requirements.txt
+  pip "${INSTALL_OPTIONS[@]}" .
+}
+
+if should_upgrade; then
+  install
+fi
+
+# Run in my_visualizations so that default output paths are scoped there.
+cd my_visualizations
+exec bin/visualize_depgraph "$@"

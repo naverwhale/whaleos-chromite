@@ -1,3 +1,5 @@
+This repo for WhaleOS is based on https://chromium.googlesource.com/chromiumos/chromite/.
+
 # Chromite Development: Starter Guide
 
 This doc tries to give an overview and head start to anyone just starting out on
@@ -12,7 +14,7 @@ developer guides at
 [external (first)](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_guide.md)
 and then [goto/chromeos-building](http://goto/chromeos-building) for internal.
 The
-[Gerrit starter guide](https://sites.google.com/a/google.com/android/development/repo-gerrit-git-workflow)
+[Gerrit starter guide](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/git_and_gerrit_intro.md)
 may also be helpful. You should flash a built image on a test device (Ask around
 for one!).
 
@@ -55,10 +57,10 @@ functionality that needs to be strictly maintained as much as possible.
 
 CBuildBot is the collection of entire code that runs on both the parent and the
 child build machines. It kicks off the individual stages in a particular build.
-It is a configurable bot that builds ChromeOS. More details on CBuildBot can be
-found in
-[this tech talk](https://drive.google.com/a/google.com/file/d/0BwPS_JpKyELWR2k0Z3JSWUhPSEE/view)
-([slides](https://docs.google.com/presentation/d/1nUZFCAADgPp48SmrAFZVV_ngR27BdhKjL32nyu_hbOo/edit#slide=id.i0)).
+It is a configurable bot that builds ChromeOS.
+
+This project is heavily deprecated as everything has moved to LUCI recipes and
+the BuildAPI interface. Do not use this project for anything new.
 
 ### chromite/cbuildbot/builders
 
@@ -79,15 +81,22 @@ Additional documentation.
 
 Code here is expected to be imported whenever necessary throughout Chromite.
 
+A notable exception: see [chromite/utils](#chromite_utils).
+
 ### chromite/scripts
 
 Unlike lib, code in scripts will not and should not be imported anywhere.
 Instead they are executed as required in the build process. Each executable is
-linked to either `wrapper.py` or `virtualenv_wrapper.py`. Some of these links
-are in `chromite/bin`. The wrapper figures out the directory of the executable
-script and the `$PYTHONPATH`. Finally, it invokes the correct Python
-installation by moving up the directory structure to find which git repo is
-making the call.
+linked to either `wrapper3.py` or `vpython_wrapper.py`. Some of these links
+are in `chromite/bin`. When we want to make the tool available to developers
+(e.g. in `$PATH`), we put the symlink under `bin/`. If it's more "internal"
+usage, then we use `scripts/`.
+
+The wrapper figures out the directory of the executable script and the
+`$PYTHONPATH`. Finally, it invokes the correct Python installation by moving up
+the directory structure to find which git repo is making the call.
+
+Do not use `virtualenv_wrapper.py` in new code.
 
 ### chromite/service
 
@@ -108,6 +117,10 @@ confirm with the owners beforehand.
 This folder contains smaller, generic utility functionality that is not tied to
 any specific entities in the codebase that would make them more at home in a lib
 module.
+
+Code must not import modules outside of utils/ as this directory is intended to
+be standalone & isolated. This restriction does *not* apply to unittest modules.
+Those may freely use Chromite APIs (e.g. chromite.lib.*).
 
 ### chromite/infra
 
@@ -150,7 +163,7 @@ It's the same as `scripts/run_tests`, but in an easier-to-find location.
 Every Python file in Chromite is accompanied by a corresponding `*_unittest.py`
 file. Running a particular file's unit tests is best done via
 ```shell
-~/trunk/chromite $ ./run_tests example_file_unittest.py
+$ ./run_tests example_file_unittest.py
 ```
 
 This script initializes a Python 3 virtualenv with necessary test dependencies
@@ -161,6 +174,15 @@ long time.
 
 Tests will not run in a standalone git checkout of chromite. Use the repo-based
 flow described above to obtain a functional-testing environment.
+
+### Network Tests
+
+By default, any test that reaches out to the network (those wrapped in a
+`@cros_test_lib.pytestmark_network_test` decorator) will not be run. To include
+these tests, add the `--network` option:
+```shell
+$ ./run_tests --network -- ...
+```
 
 ### Writing unit tests
 
@@ -181,16 +203,13 @@ Unit tests must clean up after themselves and in particular must not leak child
 processes after running. There is no guaranteed order in which tests are run or
 that tests are even run in the same process.
 
-### Pre-CQ
-
-Once you mark your CL as Commit-Queue +1 on the
-[Chromium Gerrit](https://chromium-review.googlesource.com), the PreCQ will pick
-up your change and fire few preset config runs as a precursor to CQ.
-
 ### Commit Queue
 
-This is the final step in getting your change pushed. CQ is the most
-comprehensive of all tests. Once a CL is verified by CQ, it is merged into the codebase.
+Once you mark your CL as Commit-Queue +1 (dry run) or +2 (full run) on the
+[Chromium Gerrit](https://chromium-review.googlesource.com), the CQ will pick
+up your change and run a comprehensive set of tests. Once a CL is verified by
+CQ, it is merged into the codebase. A dry run runs the same tests as a full
+run, but doesn't submit the CL when complete.
 
 ## How does ChromeOS build work?
 

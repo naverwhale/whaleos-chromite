@@ -1,4 +1,4 @@
-# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,13 +6,15 @@
 
 from setuptools import setup
 
+
 setup(
-    name='depgraph_visualization',
-    version='0.0.1',
-    packages=['depgraph_visualization'],
-    author='The Chromium OS Authors',
+    name="depgraph_visualization",
+    version="0.0.1",
+    packages=["depgraph_visualization"],
+    author="The ChromiumOS Authors",
     entry_points={
-        'console_scripts':
-            ['visualize_depgraph = depgraph_visualization.depgraph_viz:main']
-    }
+        "console_scripts": [
+            "visualize_depgraph = depgraph_visualization.depgraph_viz:main"
+        ]
+    },
 )

@@ -99,7 +99,6 @@ input_files = hoho/ec.bin
 
 ## References
 
-For details on the fields that the signer uses:
-http://go/cros-sites-archive/resources/engineering/releng/signer-documentation
+For details on the fields that the signer uses: http://go/cros-signer-docs.
 
 [pushimage]: /scripts/pushimage.py

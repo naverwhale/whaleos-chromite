@@ -1,0 +1,8 @@
+chromium.googlesource.com	FALSE	/	TRUE	2147483647	o	git-ymat.google.com=chromium-oldtoken
+chromium-review.googlesource.com	FALSE	/	TRUE	2147483647	o	git-ymat.google.com=chromium-oldtoken
+chrome-internal.googlesource.com	FALSE	/	TRUE	2147483647	o	git-ymat.google.com=chrome-internal-oldtoken
+chrome-internal-review.googlesource.com	FALSE	/	TRUE	2147483647	o	git-ymat.google.com=chrome-internal-oldtoken
+chromium.googlesource.com	FALSE	/	TRUE	2147483647	o	git-ymat.google.com=chromium-newtoken
+chromium-review.googlesource.com	FALSE	/	TRUE	2147483647	o	git-ymat.google.com=chromium-newtoken
+chrome-internal.googlesource.com	FALSE	/	TRUE	2147483647	o	git-ymat.google.com=chrome-internal-newtoken
+chrome-internal-review.googlesource.com	FALSE	/	TRUE	2147483647	o	git-ymat.google.com=chrome-internal-newtoken

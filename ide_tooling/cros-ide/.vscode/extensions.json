@@ -1,0 +1,10 @@
+{
+  // See http://go.microsoft.com/fwlink/?LinkId=827846
+  // for the documentation about the extensions.json format
+  "recommendations": [
+    "amodio.tsl-problem-matcher",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "google.wireit"
+  ]
+}

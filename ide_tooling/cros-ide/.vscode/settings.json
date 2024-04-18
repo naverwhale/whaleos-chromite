@@ -1,0 +1,44 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+  "files.exclude": {
+    ".vscode-test": true,
+    ".wireit": true,
+    "dist": false,
+    "node_modules": true,
+    "out": false
+  },
+  "search.exclude": {
+    "out": true, // set this to false to include "out" folder in search results
+    "dist": true // set this to false to include "dist" folder in search results
+  },
+  // Turn off tsc task auto detection since we have the necessary tasks as npm scripts
+  "typescript.tsc.autoDetect": "off",
+
+  // Visualize tabs and spaces.
+  "editor.renderWhitespace": "all",
+
+  // Align with the Google's style guide:
+  // https://g3doc.corp.google.com/devtools/editors/vscode/g3doc/setup.md?cl=head
+  "editor.insertSpaces": true,
+  "editor.tabSize": 2,
+  "editor.rulers": [100],
+
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+
+  // Use Prettier as the default code formatter.
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // Languages to be validated by eslint on vscode
+  "eslint.validate": ["javascript", "typescript"],
+
+  // Treat formatting errors as informational.
+  "eslint.rules.customizations": [
+    {"rule": "prettier/prettier", "severity": "info"}
+  ],
+
+  "editor.codeActionsOnSave": ["source.fixAll.eslint"],
+
+  "editor.formatOnPaste": true,
+  "editor.formatOnSave": true
+}

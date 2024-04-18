@@ -1,0 +1,4 @@
+# copybot downstreaming utility script and its wrapper
+per-file copybot_downstream* = aaronmassey@google.com
+per-file copybot_downstream* = jpmurphy@google.com
+per-file copybot_downstream* = honscheid@google.com

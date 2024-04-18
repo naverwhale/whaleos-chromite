@@ -1,4 +1,4 @@
-# Copyright 2021 The Chromium OS Authors. All rights reserved.
+# Copyright 2021 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -36,135 +36,79 @@ wheel: <
   version: "version:2.3.75"
 >
 
-# gsutil deps.
+# devserver dependency on cherrypy.
 wheel: <
-  name: "infra/python/wheels/crcmod/${vpython_platform}"
-  version: "version:1.7"
->
-
-# cloud deps.
-wheel: <
-  name: "infra/python/wheels/google-cloud-core-py2_py3"
-  version: "version:1.5.0"
+  name: "infra/python/wheels/cherrypy-py3"
+  version: "version:14.2.0"
 >
 wheel: <
-  name: "infra/python/wheels/google-cloud-datastore-py3"
-  version: "version:2.1.6"
+  name: "infra/python/wheels/cheroot-py3"
+  version: "version:6.2.4"
 >
 wheel: <
-  name: "infra/python/wheels/cachetools-py3"
-  version: "version:4.2.1"
+  name: "infra/python/wheels/backports_functools_lru_cache-py3"
+  version: "version:1.5"
 >
 wheel: <
-  name: "infra/python/wheels/certifi-py2_py3"
-  version: "version:2020.4.5.1"
->
-wheel: <
-  name: "infra/python/wheels/chardet-py2_py3"
-  version: "version:4.0.0"
->
-wheel: <
-  name: "infra/python/wheels/google-api-core-py2_py3"
-  version: "version:1.25.1"
->
-wheel: <
-  name: "infra/python/wheels/google-auth-py2_py3"
-  version: "version:1.29.0"
->
-wheel: <
-  name: "infra/python/wheels/googleapis-common-protos-py2_py3"
-  version: "version:1.52.0"
->
-wheel: <
-  name: "infra/python/wheels/grpcio/${vpython_platform}"
-  version: "version:1.34.1"
->
-wheel: <
-  name: "infra/python/wheels/idna-py2_py3"
-  version: "version:2.10"
->
-wheel: <
-  name: "infra/python/wheels/inotify_simple-py2_py3"
-  version: "version:1.1.7"
->
-wheel: <
-  name: "infra/python/wheels/libcst-py3"
-  version: "version:0.3.19"
->
-wheel: <
-  name: "infra/python/wheels/mypy-extensions-py3"
-  version: "version:0.4.3"
->
-wheel: <
-  name: "infra/python/wheels/proto-plus-py3"
-  version: "version:1.13.0"
->
-wheel: <
-  name: "infra/python/wheels/protobuf-py2_py3"
-  version: "version:3.13.0"
->
-wheel: <
-  name: "infra/python/wheels/pyasn1-py2_py3"
-  version: "version:0.4.8"
->
-wheel: <
-  name: "infra/python/wheels/pyasn1_modules-py2_py3"
-  version: "version:0.2.8"
+  name: "infra/python/wheels/portend-py3"
+  version: "version:2.2"
 >
 wheel: <
   name: "infra/python/wheels/pytz-py2_py3"
   version: "version:2021.1"
 >
 wheel: <
-  name: "infra/python/wheels/requests-py2_py3"
-  version: "version:2.25.1"
+  name: "infra/python/wheels/tempora-py3"
+  version: "version:1.11"
 >
+
+# gsutil deps.
 wheel: <
-  name: "infra/python/wheels/rsa-py3"
-  version: "version:4.7.2"
->
-wheel: <
-  name: "infra/python/wheels/setuptools-py3"
-  version: "version:46.1.3"
->
-wheel: <
-  name: "infra/python/wheels/typing-extensions-py3"
-  version: "version:3.7.4.3"
->
-wheel: <
-  name: "infra/python/wheels/typing-inspect-py3"
-  version: "version:0.7.1"
->
-wheel: <
-  name: "infra/python/wheels/urllib3-py2_py3"
-  version: "version:1.26.4"
+  name: "infra/python/wheels/crcmod/${vpython_platform}"
+  version: "version:1.7"
 >
 
 # pylint deps.
-# NB: Keep in sync with cli/cros/pylint-2.
+# NB: Keep in sync with scripts/pylint.
 wheel: <
   name: "infra/python/wheels/pylint-quotes-py3"
-  version: "version:0.2.1"
+  version: "version:0.2.3"
 >
 wheel: <
   name: "infra/python/wheels/astroid-py3"
-  version: "version:2.4.2"
+  version: "version:2.11.3"
 >
 wheel: <
   name: "infra/python/wheels/pylint-py3"
-  version: "version:2.6.0"
+  version: "version:2.13.8"
+>
+wheel: <
+  name: "infra/python/wheels/typing-extensions-py3"
+  version: "version:4.0.1"
+>
+wheel: <
+  name: "infra/python/wheels/dill-py3"
+  version: "version:0.3.4"
+>
+wheel: <
+  name: "infra/python/wheels/tomli-py3"
+  version: "version:2.0.1"
+>
+wheel: <
+  name: "infra/python/wheels/platformdirs-py3"
+  version: "version:2.5.2"
 >
 
 wheel: <
-  name: "infra/python/wheels/futures-py2_py3"
+  name: "infra/python/wheels/futures-py3"
   version: "version:3.1.1"
 >
 wheel: <
-  name: "infra/python/wheels/isort-py2_py3"
-  version: "version:4.3.4"
+  name: "infra/python/wheels/isort-py3"
+  version: "version:5.10.1"
 >
 wheel: <
-  name: "infra/python/wheels/mccabe-py2_py3"
+  name: "infra/python/wheels/mccabe-py3"
   version: "version:0.6.1"
 >
 wheel: <
@@ -244,4 +188,48 @@ wheel: <
 wheel: <
   name: "infra/python/wheels/wcwidth-py2_py3"
   version: "version:0.1.8"
+>
+
+# telemetry deps
+wheel: <
+  name: "infra/python/wheels/opentelemetry-api-py3"
+  version: "version:1.12.0"
+>
+wheel: <
+  name: "infra/python/wheels/opentelemetry-sdk-py3"
+  version: "version:1.12.0"
+>
+wheel: <
+  name: "infra/python/wheels/opentelemetry-semantic-conventions-py3"
+  version: "version:0.33b0"
+>
+wheel: <
+  name: "infra/python/wheels/deprecated-py3"
+  version: "version:1.2.13"
+>
+
+# flask deps
+wheel: <
+  name: "infra/python/wheels/itsdangerous-py3"
+  version: "version:2.0.1"
+>
+wheel: <
+  name: "infra/python/wheels/werkzeug-py3"
+  version: "version:2.0.1"
+>
+wheel: <
+  name: "infra/python/wheels/jinja2-py3"
+  version: "version:3.1.2"
+>
+wheel: <
+  name: "infra/python/wheels/markupsafe/${vpython_platform}"
+  version: "version:2.0.1"
+>
+wheel: <
+  name: "infra/python/wheels/click-py3"
+  version: "version:8.0.3"
+>
+wheel: <
+  name: "infra/python/wheels/flask-py3"
+  version: "version:2.0.2"
 >

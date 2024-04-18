@@ -1,25 +1,27 @@
 {
-  "sysroot": {
-    "path": "/build/%(build_target)s",
-    "build_target": {
-      "name": "%(build_target)s"
+  "artifact_info": {
+    "test": {
+      "output_artifacts": [
+        {
+          "artifact_types": [
+            39
+          ]
+        }
+      ]
     }
   },
   "chroot": {
-    "path": "/usr/local/google/home/davidwelling/chromiumos/chroot"
+    "path": "%(chroot)s"
   },
   "result_path": {
     "path": {
       "path": "/tmp/cc_out"
     }
   },
-  "artifact_info": {
-    "test": {
-      "output_artifacts": [
-        {"artifact_types": [
-          39
-        ]}
-      ]
-    }
+  "sysroot": {
+    "build_target": {
+      "name": "%(build_target)s"
+    },
+    "path": "/build/%(build_target)s"
   }
 }

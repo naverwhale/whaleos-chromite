@@ -1,4 +1,4 @@
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,7 +6,7 @@
 
 import logging
 import os
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, Optional, TYPE_CHECKING
 
 from chromite.api import controller
 from chromite.api import faux
@@ -16,9 +16,7 @@ from chromite.api.controller import image as image_controller
 from chromite.api.controller import sysroot as sysroot_controller
 from chromite.api.controller import test as test_controller
 from chromite.api.gen.chromite.api import artifacts_pb2
-from chromite.api.gen.chromite.api import toolchain_pb2
 from chromite.api.gen.chromiumos import common_pb2
-from chromite.lib import chroot_lib
 from chromite.lib import constants
 from chromite.lib import cros_build_lib
 from chromite.lib import sysroot_lib
@@ -26,717 +24,783 @@ from chromite.service import artifacts
 from chromite.service import test
 
 
+if TYPE_CHECKING:
+    from chromite.api import api_config
+
+
 class RegisteredGet(NamedTuple):
-  """An registered function for calling Get on an artifact type."""
-  output_proto: artifacts_pb2.GetResponse
-  artifact_dict: Any
+    """A registered function for calling Get on an artifact type."""
+
+    output_proto: artifacts_pb2.GetResponse
+    artifact_dict: Any
 
 
-def ExampleGetResponse(_input_proto, _output_proto, _config):
-  """Give an example GetResponse with a minimal coverage set."""
-  _output_proto = artifacts_pb2.GetResponse(
-      artifacts=common_pb2.UploadedArtifactsByService(
-          image=image_controller.ExampleGetResponse(),
-          sysroot=sysroot_controller.ExampleGetResponse(),
-      ))
-  return controller.RETURN_CODE_SUCCESS
+def ExampleGetResponse(_input_proto, _output_proto, _config) -> Optional[int]:
+    """Give an example GetResponse with a minimal coverage set."""
+    _output_proto = artifacts_pb2.GetResponse(
+        artifacts=common_pb2.UploadedArtifactsByService(
+            image=image_controller.ExampleGetResponse(),
+            sysroot=sysroot_controller.ExampleGetResponse(),
+        )
+    )
+    return controller.RETURN_CODE_SUCCESS
 
 
 @faux.empty_error
 @faux.success(ExampleGetResponse)
-@validate.exists('result_path.path.path')
+@validate.exists("result_path.path.path")
 @validate.validation_complete
-def Get(input_proto, output_proto, _config):
-  """Get all artifacts.
+def Get(
+    input_proto: artifacts_pb2.GetRequest,
+    output_proto: artifacts_pb2.GetResponse,
+    _config: "api_config.ApiConfig",
+) -> Optional[int]:
+    """Get all artifacts.
 
-  Get all artifacts for the build.
+    Get all artifacts for the build.
 
-  Note: As the individual artifact_type bundlers are added here, they *must*
-  stop uploading it via the individual bundler function.
+    Note: As the individual artifact_type bundlers are added here, they *must*
+    stop uploading it via the individual bundler function.
+    """
+    output_dir = input_proto.result_path.path.path
 
-  Args:
-    input_proto (GetRequest): The input proto.
-    output_proto (GetResponse): The output proto.
-    _config (api_config.ApiConfig): The API call config.
-  """
-  output_dir = input_proto.result_path.path.path
+    sysroot = controller_util.ParseSysroot(input_proto.sysroot)
+    # This endpoint does not currently support any artifacts that are built
+    # without a sysroot being present.
+    if not sysroot.path:
+        return controller.RETURN_CODE_SUCCESS
 
-  sysroot = controller_util.ParseSysroot(input_proto.sysroot)
-  # This endpoint does not currently support any artifacts that are built
-  # without a sysroot being present.
-  if not sysroot.path:
+    chroot = controller_util.ParseChroot(input_proto.chroot)
+    build_target = controller_util.ParseBuildTarget(
+        input_proto.sysroot.build_target
+    )
+
+    # A list of RegisteredGet tuples (input proto, output proto, get results).
+    get_res_list = [
+        RegisteredGet(
+            output_proto.artifacts.image,
+            image_controller.GetArtifacts(
+                input_proto.artifact_info.image,
+                chroot,
+                sysroot,
+                build_target,
+                output_dir,
+            ),
+        ),
+        RegisteredGet(
+            output_proto.artifacts.sysroot,
+            sysroot_controller.GetArtifacts(
+                input_proto.artifact_info.sysroot,
+                chroot,
+                sysroot,
+                build_target,
+                output_dir,
+            ),
+        ),
+        RegisteredGet(
+            output_proto.artifacts.test,
+            test_controller.GetArtifacts(
+                input_proto.artifact_info.test,
+                chroot,
+                sysroot,
+                build_target,
+                output_dir,
+            ),
+        ),
+    ]
+
+    for get_res in get_res_list:
+        for artifact_dict in get_res.artifact_dict:
+            kwargs = {}
+            # TODO(b/255838545): Remove the kwargs funkness when these fields
+            # have been added for all services.
+            if "failed" in artifact_dict:
+                kwargs["failed"] = artifact_dict.get("failed", False)
+                kwargs["failure_reason"] = artifact_dict.get("failure_reason")
+            get_res.output_proto.artifacts.add(
+                artifact_type=artifact_dict["type"],
+                paths=[
+                    common_pb2.Path(
+                        path=x, location=common_pb2.Path.Location.OUTSIDE
+                    )
+                    for x in artifact_dict.get("paths", [])
+                ],
+                **kwargs,
+            )
     return controller.RETURN_CODE_SUCCESS
 
-  chroot = controller_util.ParseChroot(input_proto.chroot)
-  build_target = controller_util.ParseBuildTarget(
-      input_proto.sysroot.build_target)
 
-  # A list of RegisteredGet tuples (input proto, output proto, get results).
-  get_res_list = [
-      RegisteredGet(
-          output_proto.artifacts.image,
-          image_controller.GetArtifacts(
-              input_proto.artifact_info.image, chroot, sysroot, build_target,
-              output_dir)),
-      RegisteredGet(
-          output_proto.artifacts.sysroot,
-          sysroot_controller.GetArtifacts(
-              input_proto.artifact_info.sysroot, chroot, sysroot, build_target,
-              output_dir)),
-      RegisteredGet(
-          output_proto.artifacts.test,
-          test_controller.GetArtifacts(
-              input_proto.artifact_info.test, chroot, sysroot, build_target,
-              output_dir)),
-  ]
-
-  for get_res in get_res_list:
-    for artifact_dict in get_res.artifact_dict:
-      get_res.output_proto.artifacts.add(
-          artifact_type=artifact_dict['type'],
-          paths=[
-              common_pb2.Path(
-                  path=x, location=common_pb2.Path.Location.OUTSIDE)
-              for x in artifact_dict['paths']
-          ])
-  return controller.RETURN_CODE_SUCCESS
-
-
-def _BuildSetupResponse(_input_proto, output_proto, _config):
-  """Just return POINTLESS for now."""
-  # All of the artifact types we support claim that the build is POINTLESS.
-  output_proto.build_relevance = artifacts_pb2.BuildSetupResponse.POINTLESS
+def _BuildSetupResponse(_input_proto, output_proto, _config) -> None:
+    """Just return POINTLESS for now."""
+    # All the artifact types we support claim that the build is POINTLESS.
+    output_proto.build_relevance = artifacts_pb2.BuildSetupResponse.POINTLESS
 
 
 @faux.success(_BuildSetupResponse)
 @faux.empty_error
 @validate.validation_complete
-def BuildSetup(_input_proto, output_proto, _config):
-  """Setup anything needed for building artifacts
+def BuildSetup(
+    _input_proto: artifacts_pb2.GetRequest,
+    output_proto: artifacts_pb2.GetResponse,
+    _config: "api_config.ApiConfig",
+) -> Optional[int]:
+    """Setup anything needed for building artifacts
 
-  If any artifact types require steps prior to building the package, they go
-  here.  For example, see ToolchainService/PrepareForBuild.
+    If any artifact types require steps prior to building the package, they go
+    here.  For example, see ToolchainService/PrepareForBuild.
 
-  Note: crbug/1034529 introduces this method as a noop.  As the individual
-  artifact_type bundlers are added here, they *must* stop uploading it via the
-  individual bundler function.
-
-  Args:
-    _input_proto (GetRequest): The input proto.
-    output_proto (GetResponse): The output proto.
-    _config (api_config.ApiConfig): The API call config.
-  """
-  # If any artifact_type says "NEEDED", the return is NEEDED.
-  # Otherwise, if any artifact_type says "UNKNOWN", the return is UNKNOWN.
-  # Otherwise, the return is POINTLESS.
-  output_proto.build_relevance = artifacts_pb2.BuildSetupResponse.POINTLESS
-  return controller.RETURN_CODE_SUCCESS
-
-
-def _GetImageDir(build_root, target):
-  """Return path containing images for the given build target.
-
-  TODO(saklein) Expand image_lib.GetLatestImageLink to support this use case.
-
-  Args:
-    build_root (str): Path to checkout where build occurs.
-    target (str): Name of the build target.
-
-  Returns:
-    Path to the latest directory containing target images or None.
-  """
-  image_dir = os.path.join(build_root, 'src/build/images', target, 'latest')
-  if not os.path.exists(image_dir):
-    logging.warning('Expected to find image output for target %s at %s, but '
-                    'path does not exist', target, image_dir)
-    return None
-
-  return image_dir
+    Note: crbug/1034529 introduces this method as a noop.  As the individual
+    artifact_type bundlers are added here, they *must* stop uploading it via the
+    individual bundler function.
+    """
+    # If any artifact_type says "NEEDED", the return is NEEDED.
+    # Otherwise, if any artifact_type says "UNKNOWN", the return is UNKNOWN.
+    # Otherwise, the return is POINTLESS.
+    output_proto.build_relevance = artifacts_pb2.BuildSetupResponse.POINTLESS
+    return controller.RETURN_CODE_SUCCESS
 
 
-def _BundleImageArchivesResponse(input_proto, output_proto, _config):
-  """Add artifact paths to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(input_proto.output_dir,
-                                                   'path0.tar.xz')
-  output_proto.artifacts.add().path = os.path.join(input_proto.output_dir,
-                                                   'path1.tar.xz')
+def _GetImageDir(build_root: str, target: str) -> Optional[str]:
+    """Return path containing images for the given build target.
+
+    TODO(saklein) Expand image_lib.GetLatestImageLink to support this use case.
+
+    Args:
+        build_root: Path to checkout where build occurs.
+        target: Name of the build target.
+
+    Returns:
+        Path to the latest directory containing target images or None.
+    """
+    image_dir = os.path.join(build_root, "src/build/images", target, "latest")
+    if not os.path.exists(image_dir):
+        logging.warning(
+            "Expected to find image output for target %s at %s, but "
+            "path does not exist",
+            target,
+            image_dir,
+        )
+        return None
+
+    return image_dir
+
+
+def _BundleImageArchivesResponse(input_proto, output_proto, _config) -> None:
+    """Add artifact paths to a successful response."""
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(
+                input_proto.result_path.path.path, "path0.tar.xz"
+            ),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(
+                input_proto.result_path.path.path, "path1.tar.xz"
+            ),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
 @faux.success(_BundleImageArchivesResponse)
 @faux.empty_error
-@validate.require('build_target.name')
-@validate.exists('output_dir')
+@validate.require("sysroot.build_target.name", "sysroot.path")
+@validate.exists("result_path.path.path")
 @validate.validation_complete
-def BundleImageArchives(input_proto, output_proto, _config):
-  """Create a .tar.xz archive for each image that has been created."""
-  build_target = controller_util.ParseBuildTarget(input_proto.build_target)
-  output_dir = input_proto.output_dir
-  image_dir = _GetImageDir(constants.SOURCE_ROOT, build_target.name)
-  if image_dir is None:
-    return
+def BundleImageArchives(
+    input_proto: artifacts_pb2.BundleRequest,
+    output_proto: artifacts_pb2.BundleResponse,
+    _config: "api_config.ApiConfig",
+) -> Optional[int]:
+    """Create a .tar.xz archive for each image that has been created."""
+    build_target = controller_util.ParseBuildTarget(
+        input_proto.sysroot.build_target
+    )
+    chroot = controller_util.ParseChroot(input_proto.chroot)
+    sysroot = controller_util.ParseSysroot(input_proto.sysroot)
+    output_dir = input_proto.result_path.path.path
+    image_dir = _GetImageDir(constants.SOURCE_ROOT, build_target.name)
+    if image_dir is None:
+        return
 
-  archives = artifacts.ArchiveImages(image_dir, output_dir)
+    if not sysroot.Exists(chroot=chroot):
+        logging.warning("Sysroot does not exist: %s", sysroot.path)
 
-  for archive in archives:
-    output_proto.artifacts.add().path = os.path.join(output_dir, archive)
+    archives = artifacts.ArchiveImages(chroot, sysroot, image_dir, output_dir)
+
+    for archive in archives:
+        output_proto.artifacts.add(
+            artifact_path=common_pb2.Path(
+                path=os.path.join(output_dir, archive),
+                location=common_pb2.Path.OUTSIDE,
+            )
+        )
 
 
-def _BundleImageZipResponse(input_proto, output_proto, _config):
-  """Add artifact zip files to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(input_proto.output_dir,
-                                                   'image.zip')
+def _BundleImageZipResponse(input_proto, output_proto, _config) -> None:
+    """Add artifact zip files to a successful response."""
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(input_proto.result_path.path.path, "image.zip"),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
 @faux.success(_BundleImageZipResponse)
 @faux.empty_error
-@validate.require('build_target.name', 'output_dir')
-@validate.exists('output_dir')
+@validate.require("build_target.name", "result_path.path.path")
+@validate.exists("result_path.path.path")
 @validate.validation_complete
-def BundleImageZip(input_proto, output_proto, _config):
-  """Bundle image.zip.
+def BundleImageZip(
+    input_proto: artifacts_pb2.BundleRequest,
+    output_proto: artifacts_pb2.BundleResponse,
+    _config: "api_config.ApiConfig",
+) -> Optional[int]:
+    """Bundle image.zip."""
+    target = input_proto.build_target.name
+    output_dir = input_proto.result_path.path.path
+    image_dir = _GetImageDir(constants.SOURCE_ROOT, target)
+    if image_dir is None:
+        logging.warning("Image build directory not found.")
+        return None
 
-  Args:
-    input_proto (BundleRequest): The input proto.
-    output_proto (BundleResponse): The output proto.
-    _config (api_config.ApiConfig): The API call config.
-  """
-  target = input_proto.build_target.name
-  output_dir = input_proto.output_dir
-  image_dir = _GetImageDir(constants.SOURCE_ROOT, target)
-  if image_dir is None:
-    return None
-
-  archive = artifacts.BundleImageZip(output_dir, image_dir)
-  output_proto.artifacts.add().path = os.path.join(output_dir, archive)
+    archive = artifacts.BundleImageZip(output_dir, image_dir)
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(output_dir, archive),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
-def _BundleTestUpdatePayloadsResponse(input_proto, output_proto, _config):
-  """Add test payload files to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(input_proto.output_dir,
-                                                   'payload1.bin')
+def _BundleTestUpdatePayloadsResponse(
+    input_proto, output_proto, _config
+) -> None:
+    """Add test payload files to a successful response."""
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(
+                input_proto.result_path.path.path, "payload1.bin"
+            ),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(
+                input_proto.result_path.path.path, "payload1.json"
+            ),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(
+                input_proto.result_path.path.path, "payload1.log"
+            ),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
 @faux.success(_BundleTestUpdatePayloadsResponse)
 @faux.empty_error
-@validate.require('build_target.name', 'output_dir')
-@validate.exists('output_dir')
+@validate.require("build_target.name")
 @validate.validation_complete
-def BundleTestUpdatePayloads(input_proto, output_proto, _config):
-  """Generate minimal update payloads for the build target for testing.
+def BundleTestUpdatePayloads(
+    input_proto: artifacts_pb2.BundleRequest,
+    output_proto: artifacts_pb2.BundleResponse,
+    _config: "api_config.ApiConfig",
+) -> Optional[int]:
+    """Generate minimal update payloads for the build target for testing."""
+    target = input_proto.build_target.name
+    chroot = controller_util.ParseChroot(input_proto.chroot)
+    build_root = constants.SOURCE_ROOT
+    # Leave artifact output intact, for the router layer to copy it out of the
+    # chroot. This may leave stray files leftover, but builders should clean
+    # these up.
+    output_dir = chroot.tempdir(delete=False)
 
-  Args:
-    input_proto (BundleRequest): The input proto.
-    output_proto (BundleResponse): The output proto.
-    _config (api_config.ApiConfig): The API call config.
-  """
-  target = input_proto.build_target.name
-  output_dir = input_proto.output_dir
-  build_root = constants.SOURCE_ROOT
+    # Use the first available image to create the update payload.
+    img_dir = _GetImageDir(build_root, target)
+    if img_dir is None:
+        return None
 
-  # Use the first available image to create the update payload.
-  img_dir = _GetImageDir(build_root, target)
-  if img_dir is None:
-    return None
+    img_types = [
+        constants.IMAGE_TYPE_TEST,
+        constants.IMAGE_TYPE_DEV,
+        constants.IMAGE_TYPE_BASE,
+    ]
+    img_names = [constants.IMAGE_TYPE_TO_NAME[t] for t in img_types]
+    img_paths = [os.path.join(img_dir, x) for x in img_names]
+    valid_images = [x for x in img_paths if os.path.exists(x)]
 
-  img_types = [constants.IMAGE_TYPE_TEST, constants.IMAGE_TYPE_DEV,
-               constants.IMAGE_TYPE_BASE]
-  img_names = [constants.IMAGE_TYPE_TO_NAME[t] for t in img_types]
-  img_paths = [os.path.join(img_dir, x) for x in img_names]
-  valid_images = [x for x in img_paths if os.path.exists(x)]
+    if not valid_images:
+        cros_build_lib.Die(
+            'Expected to find an image of type among %r for target "%s" '
+            "at path %s.",
+            img_types,
+            target,
+            img_dir,
+        )
+    image = valid_images[0]
 
-  if not valid_images:
-    cros_build_lib.Die(
-        'Expected to find an image of type among %r for target "%s" '
-        'at path %s.', img_types, target, img_dir)
-  image = valid_images[0]
+    payloads = artifacts.BundleTestUpdatePayloads(
+        chroot, image, str(output_dir)
+    )
+    for payload in payloads:
+        output_proto.artifacts.add(
+            artifact_path=common_pb2.Path(
+                path=payload, location=common_pb2.Path.INSIDE
+            ),
+        )
 
-  payloads = artifacts.BundleTestUpdatePayloads(image, output_dir)
-  for payload in payloads:
-    output_proto.artifacts.add().path = payload
 
-
-def _BundleAutotestFilesResponse(input_proto, output_proto, _config):
-  """Add test autotest files to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(input_proto.output_dir,
-                                                   'autotest-a.tar.gz')
+def _BundleAutotestFilesResponse(input_proto, output_proto, _config) -> None:
+    """Add test autotest files to a successful response."""
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(
+                input_proto.result_path.path.path, "autotest-a.tar.gz"
+            ),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
 @faux.success(_BundleAutotestFilesResponse)
 @faux.empty_error
-@validate.require('output_dir')
-@validate.exists('output_dir')
-def BundleAutotestFiles(input_proto, output_proto, config):
-  """Tar the autotest files for a build target.
+@validate.require("sysroot.path")
+@validate.exists("result_path.path.path")
+@validate.validation_complete
+def BundleAutotestFiles(
+    input_proto: artifacts_pb2.BundleRequest,
+    output_proto: artifacts_pb2.BundleResponse,
+    _config: "api_config.ApiConfig",
+) -> Optional[int]:
+    """Tar the autotest files for a build target."""
+    output_dir = input_proto.result_path.path.path
+    chroot = controller_util.ParseChroot(input_proto.chroot)
+    sysroot = controller_util.ParseSysroot(input_proto.sysroot)
 
-  Args:
-    input_proto (BundleRequest): The input proto.
-    output_proto (BundleResponse): The output proto.
-    config (api_config.ApiConfig): The API call config.
-  """
-  output_dir = input_proto.output_dir
-  target = input_proto.build_target.name
-  chroot = controller_util.ParseChroot(input_proto.chroot)
+    if not sysroot.Exists(chroot=chroot):
+        logging.warning("Sysroot does not exist: %s", sysroot.path)
+        return
 
-  if target:
-    sysroot_path = os.path.join('/build', target)
-  else:
-    # New style call, use chroot and sysroot.
-    sysroot_path = input_proto.sysroot.path
-    if not sysroot_path:
-      cros_build_lib.Die('sysroot.path is required.')
+    try:
+        # Note that this returns the full path to *multiple* tarballs.
+        archives = artifacts.BundleAutotestFiles(chroot, sysroot, output_dir)
+    except artifacts.Error as e:
+        logging.warning(e)
+        return
 
-  sysroot = sysroot_lib.Sysroot(sysroot_path)
-
-  # TODO(saklein): Switch to the validate_only decorator when legacy handling
-  #   is removed.
-  if config.validate_only:
-    return controller.RETURN_CODE_VALID_INPUT
-
-  if not sysroot.Exists(chroot=chroot):
-    cros_build_lib.Die('Sysroot path must exist: %s', sysroot.path)
-
-  try:
-    # Note that this returns the full path to *multiple* tarballs.
-    archives = artifacts.BundleAutotestFiles(chroot, sysroot, output_dir)
-  except artifacts.Error as e:
-    logging.warning(e)
-    return
-
-  for archive in archives.values():
-    output_proto.artifacts.add().path = archive
+    for archive in archives.values():
+        output_proto.artifacts.add(
+            artifact_path=common_pb2.Path(
+                path=archive, location=common_pb2.Path.OUTSIDE
+            )
+        )
 
 
-def _BundleTastFilesResponse(input_proto, output_proto, _config):
-  """Add test tast files to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(input_proto.output_dir,
-                                                   'tast_bundles.tar.gz')
+def _BundleTastFilesResponse(input_proto, output_proto, _config) -> None:
+    """Add test tast files to a successful response."""
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(
+                input_proto.result_path.path.path, "tast_bundles.tar.gz"
+            ),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
 @faux.success(_BundleTastFilesResponse)
 @faux.empty_error
-@validate.require('output_dir')
-@validate.exists('output_dir')
-def BundleTastFiles(input_proto, output_proto, config):
-  """Tar the tast files for a build target.
+@validate.require("sysroot.path")
+@validate.exists("result_path.path.path")
+@validate.validation_complete
+def BundleTastFiles(
+    input_proto: artifacts_pb2.BundleRequest,
+    output_proto: artifacts_pb2.BundleResponse,
+    _config: "api_config.ApiConfig",
+) -> Optional[int]:
+    """Tar the tast files for a build target."""
+    output_dir = input_proto.result_path.path.path
+    chroot = controller_util.ParseChroot(input_proto.chroot)
+    sysroot = controller_util.ParseSysroot(input_proto.sysroot)
 
-  Args:
-    input_proto (BundleRequest): The input proto.
-    output_proto (BundleResponse): The output proto.
-    config (api_config.ApiConfig): The API call config.
-  """
-  target = input_proto.build_target.name
-  output_dir = input_proto.output_dir
-  build_root = constants.SOURCE_ROOT
+    if not sysroot.Exists(chroot=chroot):
+        logging.warning("Sysroot does not exist: %s", sysroot.path)
+        return
 
-  chroot = controller_util.ParseChroot(input_proto.chroot)
-  sysroot_path = input_proto.sysroot.path
+    archive = artifacts.BundleTastFiles(chroot, sysroot, output_dir)
 
-  # TODO(saklein) Cleanup legacy handling after it has been switched over.
-  if target:
-    # Legacy handling.
-    chroot = chroot_lib.Chroot(path=os.path.join(build_root, 'chroot'))
-    sysroot_path = os.path.join('/build', target)
+    if not archive:
+        logging.warning("Found no tast files for %s.", sysroot.path)
+        return
 
-  # New handling - chroot & sysroot based.
-  # TODO(saklein) Switch this to the require decorator when legacy is removed.
-  if not sysroot_path:
-    cros_build_lib.Die('sysroot.path is required.')
-
-  # TODO(saklein): Switch to the validation_complete decorator when legacy
-  #   handling is removed.
-  if config.validate_only:
-    return controller.RETURN_CODE_VALID_INPUT
-
-  sysroot = sysroot_lib.Sysroot(sysroot_path)
-  if not sysroot.Exists(chroot=chroot):
-    cros_build_lib.Die('Sysroot must exist.')
-
-  archive = artifacts.BundleTastFiles(chroot, sysroot, output_dir)
-
-  if archive:
-    output_proto.artifacts.add().path = archive
-  else:
-    logging.warning('Found no tast files for %s.', target)
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=archive, location=common_pb2.Path.OUTSIDE
+        )
+    )
 
 
 def BundlePinnedGuestImages(_input_proto, _output_proto, _config):
-  # TODO(crbug/1034529): Remove this endpoint
-  pass
+    # TODO(crbug/1034529): Remove this endpoint
+    pass
+
 
 def FetchPinnedGuestImageUris(_input_proto, _output_proto, _config):
-  # TODO(crbug/1034529): Remove this endpoint
-  pass
+    # TODO(crbug/1034529): Remove this endpoint
+    pass
 
 
-def _FetchMetadataResponse(_input_proto, output_proto, _config):
-  """Populate the output_proto with sample data."""
-  for fp in ('/metadata/foo.txt', '/metadata/bar.jsonproto'):
-    output_proto.filepaths.add(path=common_pb2.Path(
-        path=fp, location=common_pb2.Path.OUTSIDE))
-  return controller.RETURN_CODE_SUCCESS
+def _FetchMetadataResponse(
+    _input_proto, output_proto, _config
+) -> Optional[int]:
+    """Populate the output_proto with sample data."""
+    for fp in ("/metadata/foo.txt", "/metadata/bar.jsonproto"):
+        output_proto.filepaths.add(
+            path=common_pb2.Path(path=fp, location=common_pb2.Path.OUTSIDE)
+        )
+    return controller.RETURN_CODE_SUCCESS
 
 
 @faux.success(_FetchMetadataResponse)
 @faux.empty_error
-@validate.exists('chroot.path')
-@validate.require('sysroot.path')
+@validate.exists("chroot.path")
+@validate.require("sysroot.path")
 @validate.validation_complete
-def FetchMetadata(input_proto, output_proto, _config):
-  """FetchMetadata returns the paths to all build/test metadata files.
+def FetchMetadata(
+    input_proto: artifacts_pb2.FetchMetadataRequest,
+    output_proto: artifacts_pb2.FetchMetadataResponse,
+    _config: "api_config.ApiConfig",
+) -> Optional[int]:
+    """FetchMetadata returns the paths to all build/test metadata files.
 
-  This implements ArtifactsService.FetchMetadata.
-
-  Args:
-    input_proto (FetchMetadataRequest): The input proto.
-    output_proto (FetchMetadataResponse): The output proto.
-    config (api_config.ApiConfig): The API call config.
-  """
-  chroot = controller_util.ParseChroot(input_proto.chroot)
-  sysroot = controller_util.ParseSysroot(input_proto.sysroot)
-  for path in test.FindAllMetadataFiles(chroot, sysroot):
-    output_proto.filepaths.add(
-        path=common_pb2.Path(path=path, location=common_pb2.Path.OUTSIDE))
-  return controller.RETURN_CODE_SUCCESS
+    This implements ArtifactsService.FetchMetadata.
+    """
+    chroot = controller_util.ParseChroot(input_proto.chroot)
+    sysroot = controller_util.ParseSysroot(input_proto.sysroot)
+    for path in test.FindAllMetadataFiles(chroot, sysroot):
+        output_proto.filepaths.add(
+            path=common_pb2.Path(path=path, location=common_pb2.Path.OUTSIDE)
+        )
+    return controller.RETURN_CODE_SUCCESS
 
 
 def _BundleFirmwareResponse(input_proto, output_proto, _config):
-  """Add test firmware image files to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(
-      input_proto.output_dir, 'firmware.tar.gz')
+    """Add test firmware image files to a successful response."""
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(
+                input_proto.result_path.path.path, "firmware.tar.gz"
+            ),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
 @faux.success(_BundleFirmwareResponse)
 @faux.empty_error
-@validate.require('output_dir', 'sysroot.path')
-@validate.exists('output_dir')
+@validate.require("sysroot.path")
+@validate.exists("result_path.path.path")
 @validate.validation_complete
-def BundleFirmware(input_proto, output_proto, _config):
-  """Tar the firmware images for a build target.
+def BundleFirmware(
+    input_proto: artifacts_pb2.BundleRequest,
+    output_proto: artifacts_pb2.BundleResponse,
+    _config: "api_config.ApiConfig",
+) -> Optional[int]:
+    """Tar the firmware images for a build target."""
+    output_dir = input_proto.result_path.path.path
+    chroot = controller_util.ParseChroot(input_proto.chroot)
+    sysroot = controller_util.ParseSysroot(input_proto.sysroot)
 
-  Args:
-    input_proto (BundleRequest): The input proto.
-    output_proto (BundleResponse): The output proto.
-    _config (api_config.ApiConfig): The API call config.
-  """
-  output_dir = input_proto.output_dir
-  chroot = controller_util.ParseChroot(input_proto.chroot)
-  sysroot_path = input_proto.sysroot.path
-  sysroot = sysroot_lib.Sysroot(sysroot_path)
+    if not chroot.exists():
+        logging.warning("Chroot does not exist: %s", chroot.path)
+        return
+    elif not sysroot.Exists(chroot=chroot):
+        logging.warning("Sysroot does not exist: %s", sysroot.path)
+        return
 
-  if not chroot.exists():
-    cros_build_lib.Die('Chroot does not exist: %s', chroot.path)
-  elif not sysroot.Exists(chroot=chroot):
-    cros_build_lib.Die('Sysroot does not exist: %s',
-                       chroot.full_path(sysroot.path))
+    archive = artifacts.BuildFirmwareArchive(chroot, sysroot, output_dir)
 
-  archive = artifacts.BuildFirmwareArchive(chroot, sysroot, output_dir)
+    if not archive:
+        logging.warning(
+            "Could not create firmware archive. No firmware found for %s.",
+            sysroot.path,
+        )
+        return
 
-  if archive is None:
-    cros_build_lib.Die(
-        'Could not create firmware archive. No firmware found for %s.',
-        sysroot_path)
-
-  output_proto.artifacts.add().path = archive
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=archive, location=common_pb2.Path.OUTSIDE
+        )
+    )
 
 
-def _BundleFpmcuUnittestsResponse(input_proto, output_proto, _config):
-  """Add fingerprint MCU unittest binaries to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(
-      input_proto.output_dir, 'fpmcu_unittests.tar.gz')
+def _BundleFpmcuUnittestsResponse(input_proto, output_proto, _config) -> None:
+    """Add fingerprint MCU unittest binaries to a successful response."""
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(
+                input_proto.result_path.path.path, "fpmcu_unittests.tar.gz"
+            ),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
 @faux.success(_BundleFpmcuUnittestsResponse)
 @faux.empty_error
-@validate.require('output_dir', 'sysroot.path')
-@validate.exists('output_dir')
+@validate.require("sysroot.path")
+@validate.exists("result_path.path.path")
 @validate.validation_complete
-def BundleFpmcuUnittests(input_proto, output_proto, _config):
-  """Tar the fingerprint MCU unittest binaries for a build target.
+def BundleFpmcuUnittests(
+    input_proto: artifacts_pb2.BundleRequest,
+    output_proto: artifacts_pb2.BundleResponse,
+    _config: "api_config.ApiConfig",
+) -> Optional[int]:
+    """Tar the fingerprint MCU unittest binaries for a build target."""
+    output_dir = input_proto.result_path.path.path
+    chroot = controller_util.ParseChroot(input_proto.chroot)
+    sysroot = controller_util.ParseSysroot(input_proto.sysroot)
 
-  Args:
-    input_proto (BundleRequest): The input proto.
-    output_proto (BundleResponse): The output proto.
-    _config (api_config.ApiConfig): The API call config.
-  """
-  output_dir = input_proto.output_dir
-  chroot = controller_util.ParseChroot(input_proto.chroot)
-  sysroot_path = input_proto.sysroot.path
-  sysroot = sysroot_lib.Sysroot(sysroot_path)
+    if not chroot.exists():
+        logging.warning("Chroot does not exist: %s", chroot.path)
+        return
+    elif not sysroot.Exists(chroot=chroot):
+        logging.warning("Sysroot does not exist: %s", sysroot.path)
+        return
 
-  if not chroot.exists():
-    cros_build_lib.Die('Chroot does not exist: %s', chroot.path)
-  elif not sysroot.Exists(chroot=chroot):
-    cros_build_lib.Die('Sysroot does not exist: %s',
-                       chroot.full_path(sysroot.path))
+    archive = artifacts.BundleFpmcuUnittests(chroot, sysroot, output_dir)
 
-  archive = artifacts.BundleFpmcuUnittests(chroot, sysroot, output_dir)
+    if not archive:
+        logging.warning("No fpmcu unittests found for %s.", sysroot.path)
+        return
 
-  if archive is None:
-    logging.warning(
-        'No fpmcu unittests found for %s.', sysroot_path)
-    return
-
-  output_proto.artifacts.add().path = archive
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=archive, location=common_pb2.Path.OUTSIDE
+        )
+    )
 
 
-def _BundleEbuildLogsResponse(input_proto, output_proto, _config):
-  """Add test log files to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(
-      input_proto.output_dir, 'ebuild-logs.tar.gz')
+def _BundleEbuildLogsResponse(input_proto, output_proto, _config) -> None:
+    """Add test log files to a successful response."""
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(
+                input_proto.result_path.path.path, "ebuild-logs.tar.gz"
+            ),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
 @faux.success(_BundleEbuildLogsResponse)
 @faux.empty_error
-@validate.exists('output_dir')
-def BundleEbuildLogs(input_proto, output_proto, config):
-  """Tar the ebuild logs for a build target.
+@validate.require("sysroot.path")
+@validate.exists("result_path.path.path")
+@validate.validation_complete
+def BundleEbuildLogs(
+    input_proto: artifacts_pb2.BundleRequest,
+    output_proto: artifacts_pb2.BundleResponse,
+    _config: "api_config.ApiConfig",
+) -> Optional[int]:
+    """Tar the ebuild logs for a build target."""
+    output_dir = input_proto.result_path.path.path
+    chroot = controller_util.ParseChroot(input_proto.chroot)
+    sysroot = controller_util.ParseSysroot(input_proto.sysroot)
 
-  Args:
-    input_proto (BundleRequest): The input proto.
-    output_proto (BundleResponse): The output proto.
-    config (api_config.ApiConfig): The API call config.
-  """
-  output_dir = input_proto.output_dir
-  sysroot_path = input_proto.sysroot.path
-  chroot = controller_util.ParseChroot(input_proto.chroot)
+    if not sysroot.Exists(chroot=chroot):
+        logging.warning("Sysroot does not exist: %s", sysroot.path)
+        return
 
-  # TODO(mmortensen) Cleanup legacy handling after it has been switched over.
-  target = input_proto.build_target.name
-  if target:
-    # Legacy handling.
-    build_root = constants.SOURCE_ROOT
-    chroot = chroot_lib.Chroot(path=os.path.join(build_root, 'chroot'))
-    sysroot_path = os.path.join('/build', target)
+    archive = artifacts.BundleEBuildLogsTarball(chroot, sysroot, output_dir)
 
-  # TODO(saklein): Switch to validation_complete decorator after legacy
-  #   handling has been cleaned up.
-  if config.validate_only:
-    return controller.RETURN_CODE_VALID_INPUT
+    if not archive:
+        logging.warning(
+            "Could not create ebuild logs archive. No logs found for %s.",
+            sysroot.path,
+        )
+        return
 
-  sysroot = sysroot_lib.Sysroot(sysroot_path)
-  archive = artifacts.BundleEBuildLogsTarball(chroot, sysroot, output_dir)
-  if archive is None:
-    cros_build_lib.Die(
-        'Could not create ebuild logs archive. No logs found for %s.',
-        sysroot.path)
-  output_proto.artifacts.add().path = os.path.join(output_dir, archive)
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(output_dir, archive),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
-def _BundleChromeOSConfigResponse(input_proto, output_proto, _config):
-  """Add test config files to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(
-      input_proto.output_dir, 'config.yaml')
+def _BundleChromeOSConfigResponse(input_proto, output_proto, _config) -> None:
+    """Add test config files to a successful response."""
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(input_proto.result_path.path.path, "config.yaml"),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
 @faux.success(_BundleChromeOSConfigResponse)
 @faux.empty_error
-@validate.exists('output_dir')
+@validate.require("sysroot.path")
+@validate.exists("result_path.path.path")
 @validate.validation_complete
-def BundleChromeOSConfig(input_proto, output_proto, _config):
-  """Output the ChromeOS Config payload for a build target.
+def BundleChromeOSConfig(
+    input_proto: artifacts_pb2.BundleRequest,
+    output_proto: artifacts_pb2.BundleResponse,
+    _config: "api_config.ApiConfig",
+) -> Optional[int]:
+    """Output the ChromeOS Config payload for a build target."""
+    output_dir = input_proto.result_path.path.path
+    chroot = controller_util.ParseChroot(input_proto.chroot)
+    sysroot = controller_util.ParseSysroot(input_proto.sysroot)
 
-  Args:
-    input_proto (BundleRequest): The input proto.
-    output_proto (BundleResponse): The output proto.
-    _config (api_config.ApiConfig): The API call config.
-  """
-  output_dir = input_proto.output_dir
-  sysroot_path = input_proto.sysroot.path
-  chroot = controller_util.ParseChroot(input_proto.chroot)
+    chromeos_config = artifacts.BundleChromeOSConfig(
+        chroot, sysroot, output_dir
+    )
 
-  # TODO(mmortensen) Cleanup legacy handling after it has been switched over.
-  target = input_proto.build_target.name
-  if target:
-    # Legacy handling.
-    build_root = constants.SOURCE_ROOT
-    chroot = chroot_lib.Chroot(path=os.path.join(build_root, 'chroot'))
-    sysroot_path = os.path.join('/build', target)
+    if not chromeos_config:
+        logging.warning(
+            "Could not create ChromeOS Config for %s.", sysroot.path
+        )
+        return
 
-  sysroot = sysroot_lib.Sysroot(sysroot_path)
-  chromeos_config = artifacts.BundleChromeOSConfig(chroot, sysroot, output_dir)
-  if chromeos_config is None:
-    cros_build_lib.Die(
-        'Could not create ChromeOS Config payload. No config found for %s.',
-        sysroot.path)
-  output_proto.artifacts.add().path = os.path.join(output_dir, chromeos_config)
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(output_dir, chromeos_config),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
-def _BundleSimpleChromeArtifactsResponse(input_proto, output_proto, _config):
-  """Add test simple chrome files to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(
-      input_proto.output_dir, 'simple_chrome.txt')
+def _BundleSimpleChromeArtifactsResponse(
+    input_proto, output_proto, _config
+) -> None:
+    """Add test simple chrome files to a successful response."""
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(
+                input_proto.result_path.path.path, "simple_chrome.txt"
+            ),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
 @faux.success(_BundleSimpleChromeArtifactsResponse)
 @faux.empty_error
-@validate.require('output_dir', 'sysroot.build_target.name', 'sysroot.path')
-@validate.exists('output_dir')
+@validate.require(
+    "result_path.path.path", "sysroot.build_target.name", "sysroot.path"
+)
+@validate.exists("result_path.path.path")
 @validate.validation_complete
-def BundleSimpleChromeArtifacts(input_proto, output_proto, _config):
-  """Create the simple chrome artifacts."""
-  sysroot_path = input_proto.sysroot.path
-  output_dir = input_proto.output_dir
+def BundleSimpleChromeArtifacts(
+    input_proto, output_proto, _config
+) -> Optional[int]:
+    """Create the simple chrome artifacts."""
+    sysroot_path = input_proto.sysroot.path
+    output_dir = input_proto.result_path.path.path
 
-  # Build out the argument instances.
-  build_target = controller_util.ParseBuildTarget(
-      input_proto.sysroot.build_target)
-  chroot = controller_util.ParseChroot(input_proto.chroot)
-  # Sysroot.path needs to be the fully qualified path, including the chroot.
-  full_sysroot_path = os.path.join(chroot.path, sysroot_path.lstrip(os.sep))
-  sysroot = sysroot_lib.Sysroot(full_sysroot_path)
+    # Build out the argument instances.
+    build_target = controller_util.ParseBuildTarget(
+        input_proto.sysroot.build_target
+    )
+    chroot = controller_util.ParseChroot(input_proto.chroot)
+    # Sysroot.path needs to be the fully qualified path, including the chroot.
+    full_sysroot_path = chroot.full_path(sysroot_path)
+    sysroot = sysroot_lib.Sysroot(full_sysroot_path)
 
-  # Quick sanity check that the sysroot exists before we go on.
-  if not sysroot.Exists():
-    cros_build_lib.Die('The sysroot does not exist.')
+    # Check that the sysroot exists before we go on.
+    if not sysroot.Exists():
+        logging.warning("The sysroot does not exist.")
+        return
 
-  try:
-    results = artifacts.BundleSimpleChromeArtifacts(chroot, sysroot,
-                                                    build_target, output_dir)
-  except artifacts.Error as e:
-    cros_build_lib.Die('Error %s raised in BundleSimpleChromeArtifacts: %s',
-                       type(e), e)
+    try:
+        results = artifacts.BundleSimpleChromeArtifacts(
+            chroot, sysroot, build_target, output_dir
+        )
+    except artifacts.Error as e:
+        logging.warning(
+            "Error %s raised in BundleSimpleChromeArtifacts: %s", type(e), e
+        )
+        return
 
-  for file_name in results:
-    output_proto.artifacts.add().path = file_name
+    for file_name in results:
+        output_proto.artifacts.add(
+            artifact_path=common_pb2.Path(
+                path=file_name, location=common_pb2.Path.OUTSIDE
+            )
+        )
 
 
-def _BundleVmFilesResponse(input_proto, output_proto, _config):
-  """Add test vm files to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(
-      input_proto.output_dir, 'f1.tar')
+def _BundleVmFilesResponse(input_proto, output_proto, _config) -> None:
+    """Add test vm files to a successful response."""
+    output_proto.artifacts.add().path = os.path.join(
+        input_proto.output_dir, "f1.tar"
+    )
 
 
 @faux.success(_BundleVmFilesResponse)
 @faux.empty_error
-@validate.require('chroot.path', 'test_results_dir', 'output_dir')
-@validate.exists('output_dir')
+@validate.require("chroot.path", "test_results_dir", "output_dir")
+@validate.exists("output_dir")
 @validate.validation_complete
-def BundleVmFiles(input_proto, output_proto, _config):
-  """Tar VM disk and memory files.
+def BundleVmFiles(
+    input_proto: artifacts_pb2.BundleVmFilesRequest,
+    output_proto: artifacts_pb2.BundleResponse,
+    _config: "api_config.ApiConfig",
+) -> None:
+    """Tar VM disk and memory files."""
+    chroot = controller_util.ParseChroot(input_proto.chroot)
+    test_results_dir = input_proto.test_results_dir
+    output_dir = input_proto.output_dir
 
-  Args:
-    input_proto (BundleVmFilesRequest): The input proto.
-    output_proto (BundleResponse): The output proto.
-    _config (api_config.ApiConfig): The API call config.
-  """
-  chroot = controller_util.ParseChroot(input_proto.chroot)
-  test_results_dir = input_proto.test_results_dir
-  output_dir = input_proto.output_dir
-
-  archives = artifacts.BundleVmFiles(
-      chroot, test_results_dir, output_dir)
-  for archive in archives:
-    output_proto.artifacts.add().path = archive
-
-def _BundleAFDOGenerationArtifactsResponse(input_proto, output_proto, _config):
-  """Add test tarball AFDO file to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(
-      input_proto.output_dir, 'artifact1')
+    archives = artifacts.BundleVmFiles(chroot, test_results_dir, output_dir)
+    for archive in archives:
+        output_proto.artifacts.add().path = archive
 
 
-_VALID_ARTIFACT_TYPES = [toolchain_pb2.BENCHMARK_AFDO,
-                         toolchain_pb2.ORDERFILE]
-@faux.success(_BundleAFDOGenerationArtifactsResponse)
-@faux.empty_error
-@validate.require('build_target.name', 'output_dir')
-@validate.is_in('artifact_type', _VALID_ARTIFACT_TYPES)
-@validate.exists('output_dir')
-@validate.exists('chroot.chrome_dir')
-@validate.validation_complete
-def BundleAFDOGenerationArtifacts(input_proto, output_proto, _config):
-  """Generic function for creating tarballs of both AFDO and orderfile.
-
-  Args:
-    input_proto (BundleChromeAFDORequest): The input proto.
-    output_proto (BundleResponse): The output proto.
-    _config (api_config.ApiConfig): The API call config.
-  """
-  chrome_root = input_proto.chroot.chrome_dir
-  output_dir = input_proto.output_dir
-  artifact_type = input_proto.artifact_type
-
-  build_target = controller_util.ParseBuildTarget(input_proto.build_target)
-  chroot = controller_util.ParseChroot(input_proto.chroot)
-
-  try:
-    is_orderfile = bool(artifact_type is toolchain_pb2.ORDERFILE)
-    results = artifacts.BundleAFDOGenerationArtifacts(
-        is_orderfile, chroot, chrome_root,
-        build_target, output_dir)
-  except artifacts.Error as e:
-    cros_build_lib.Die('Error %s raised in BundleSimpleChromeArtifacts: %s',
-                       type(e), e)
-
-  for file_name in results:
-    output_proto.artifacts.add().path = file_name
-
-
-def _ExportCpeReportResponse(input_proto, output_proto, _config):
-  """Add test cpe results to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(
-      input_proto.output_dir, 'cpe_report.txt')
-  output_proto.artifacts.add().path = os.path.join(
-      input_proto.output_dir, 'cpe_warnings.txt')
-
-
-@faux.success(_ExportCpeReportResponse)
-@faux.empty_error
-@validate.exists('output_dir')
-def ExportCpeReport(input_proto, output_proto, config):
-  """Export a CPE report.
-
-  Args:
-    input_proto (BundleRequest): The input proto.
-    output_proto (BundleResponse): The output proto.
-    config (api_config.ApiConfig): The API call config.
-  """
-  chroot = controller_util.ParseChroot(input_proto.chroot)
-  output_dir = input_proto.output_dir
-
-  if input_proto.build_target.name:
-    # Legacy handling - use the default sysroot path for the build target.
-    build_target = controller_util.ParseBuildTarget(input_proto.build_target)
-    sysroot = sysroot_lib.Sysroot(build_target.root)
-  elif input_proto.sysroot.path:
-    sysroot = sysroot_lib.Sysroot(input_proto.sysroot.path)
-  else:
-    # TODO(saklein): Switch to validate decorators once legacy handling can be
-    #   cleaned up.
-    cros_build_lib.Die('sysroot.path is required.')
-
-  if config.validate_only:
-    return controller.RETURN_CODE_VALID_INPUT
-
-  cpe_result = artifacts.GenerateCpeReport(chroot, sysroot, output_dir)
-
-  output_proto.artifacts.add().path = cpe_result.report
-  output_proto.artifacts.add().path = cpe_result.warnings
-
-
-def _BundleGceTarballResponse(input_proto, output_proto, _config):
-  """Add artifact tarball to a successful response."""
-  output_proto.artifacts.add().path = os.path.join(input_proto.output_dir,
-                                                   constants.TEST_IMAGE_GCE_TAR)
+def _BundleGceTarballResponse(input_proto, output_proto, _config) -> None:
+    """Add artifact tarball to a successful response."""
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=os.path.join(
+                input_proto.result_path.path.path, constants.TEST_IMAGE_GCE_TAR
+            ),
+            location=common_pb2.Path.OUTSIDE,
+        )
+    )
 
 
 @faux.success(_BundleGceTarballResponse)
 @faux.empty_error
-@validate.require('build_target.name', 'output_dir')
-@validate.exists('output_dir')
+@validate.require("build_target.name", "result_path.path.path")
+@validate.exists("result_path.path.path")
 @validate.validation_complete
-def BundleGceTarball(input_proto, output_proto, _config):
-  """Bundle the test image into a tarball suitable for importing into GCE.
+def BundleGceTarball(
+    input_proto: artifacts_pb2.BundleRequest,
+    output_proto: artifacts_pb2.BundleResponse,
+    _config: "api_config.ApiConfig",
+) -> Optional[int]:
+    """Bundle the test image into a tarball suitable for importing into GCE."""
+    target = input_proto.build_target.name
+    output_dir = input_proto.result_path.path.path
+    image_dir = _GetImageDir(constants.SOURCE_ROOT, target)
+    if image_dir is None:
+        return None
 
-  Args:
-    input_proto (BundleRequest): The input proto.
-    output_proto (BundleResponse): The output proto.
-    _config (api_config.ApiConfig): The API call config.
-  """
-  target = input_proto.build_target.name
-  output_dir = input_proto.output_dir
-  image_dir = _GetImageDir(constants.SOURCE_ROOT, target)
-  if image_dir is None:
-    return None
-
-  tarball = artifacts.BundleGceTarball(output_dir, image_dir)
-  output_proto.artifacts.add().path = tarball
+    tarball = artifacts.BundleGceTarball(output_dir, image_dir)
+    output_proto.artifacts.add(
+        artifact_path=common_pb2.Path(
+            path=tarball, location=common_pb2.Path.OUTSIDE
+        )
+    )

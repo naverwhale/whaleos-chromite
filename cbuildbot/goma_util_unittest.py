@@ -1,4 +1,4 @@
-# Copyright 2017 The Chromium OS Authors. All rights reserved.
+# Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -16,269 +16,286 @@ from chromite.lib import cros_build_lib
 from chromite.lib import cros_test_lib
 from chromite.lib import gs
 from chromite.lib import osutils
+from chromite.utils import hostname_util
 
 
 class TestGomaLogUploader(cros_test_lib.MockTempDirTestCase):
-  """Tests for upload_goma_info."""
+    """Tests for upload_goma_info."""
 
-  def _CreateLogFile(self, name, timestamp):
-    path = os.path.join(
-        self.tempdir,
-        '%s.host.log.INFO.%s' % (name, timestamp.strftime('%Y%m%d-%H%M%S.%f')))
-    osutils.WriteFile(
-        path,
-        timestamp.strftime('Log file created at: %Y/%m/%d %H:%M:%S'))
+    def setUp(self):
+        # cros_build_lib.CreateTarball() function is unit tested. Safe to patch.
+        # pylint: disable=unused-argument
+        def _createTarball(tarball_path, *args, **kwargs):
+            osutils.Touch(tarball_path, makedirs=True)
 
-  def testUpload(self):
-    self._CreateLogFile(
-        'compiler_proxy', datetime.datetime(2017, 4, 26, 12, 0, 0))
-    self._CreateLogFile(
-        'compiler_proxy-subproc', datetime.datetime(2017, 4, 26, 12, 0, 0))
-    self._CreateLogFile(
-        'gomacc', datetime.datetime(2017, 4, 26, 12, 1, 0))
-    self._CreateLogFile(
-        'gomacc', datetime.datetime(2017, 4, 26, 12, 2, 0))
+        self.tarball_mock = self.PatchObject(
+            cros_build_lib, "CreateTarball", side_effect=_createTarball
+        )
 
-    # Set env vars.
-    os.environ.update({
-        'GLOG_log_dir': self.tempdir,
-        'BUILDBOT_BUILDERNAME': 'builder-name',
-        'BUILDBOT_MASTERNAME': 'master-name',
-        'BUILDBOT_SLAVENAME': 'slave-name',
-        'BUILDBOT_CLOBBER': '1',
-    })
+    def _CreateLogFile(self, name, timestamp):
+        path = os.path.join(
+            self.tempdir,
+            "%s.host.log.INFO.%s"
+            % (name, timestamp.strftime("%Y%m%d-%H%M%S.%f")),
+        )
+        osutils.WriteFile(
+            path, timestamp.strftime("Log file created at: %Y/%m/%d %H:%M:%S")
+        )
 
-    self.PatchObject(cros_build_lib, 'GetHostName', lambda: 'dummy-host-name')
-    copy_log = []
-    self.PatchObject(
-        gs.GSContext, 'CopyInto',
-        lambda _, __, remote_dir, filename=None, **kwargs: copy_log.append(
-            (remote_dir, filename, kwargs.get('headers'))))
+    def testUpload(self):
+        self._CreateLogFile(
+            "compiler_proxy", datetime.datetime(2017, 4, 26, 12, 0, 0)
+        )
+        self._CreateLogFile(
+            "compiler_proxy-subproc", datetime.datetime(2017, 4, 26, 12, 0, 0)
+        )
+        self._CreateLogFile("gomacc", datetime.datetime(2017, 4, 26, 12, 1, 0))
+        self._CreateLogFile("gomacc", datetime.datetime(2017, 4, 26, 12, 2, 0))
 
-    goma_util.GomaLogUploader(self.tempdir, today=datetime.date(2017, 4, 26),
-                              dry_run=True,
-                              cbb_config_name='test_config').Upload()
+        # Set env vars.
+        os.environ.update(
+            {
+                "GLOG_log_dir": str(self.tempdir),
+                "BUILDBOT_BUILDERNAME": "builder-name",
+                "BUILDBOT_MASTERNAME": "master-name",
+                "BUILDBOT_SLAVENAME": "slave-name",
+                "BUILDBOT_CLOBBER": "1",
+            }
+        )
 
-    expect_builderinfo = json.dumps(collections.OrderedDict([
-        ('builder', 'builder-name'),
-        ('master', 'master-name'),
-        ('slave', 'slave-name'),
-        ('clobber', True),
-        ('os', 'chromeos'),
-        ('is_luci', False),
-        ('cbb_config_name', 'test_config'),
-    ]))
-    self.assertEqual(
-        copy_log,
-        [('gs://chrome-goma-log/2017/04/26/dummy-host-name',
-          'compiler_proxy-subproc.host.log.INFO.20170426-120000.000000.gz',
-          ['x-goog-meta-builderinfo:' + expect_builderinfo]),
-         ('gs://chrome-goma-log/2017/04/26/dummy-host-name',
-          'compiler_proxy.host.log.INFO.20170426-120000.000000.gz',
-          ['x-goog-meta-builderinfo:' + expect_builderinfo]),
-         ('gs://chrome-goma-log/2017/04/26/dummy-host-name',
-          'gomacc.host.log.INFO.20170426-120100.000000.tar.gz',
-          ['x-goog-meta-builderinfo:' + expect_builderinfo]),
-        ])
+        self.PatchObject(
+            hostname_util, "get_host_name", lambda: "stub-host-name"
+        )
+        copy_log = []
+        self.PatchObject(
+            gs.GSContext,
+            "CopyInto",
+            lambda _, __, remote_dir, filename=None, **kwargs: copy_log.append(
+                (remote_dir, filename, kwargs.get("headers"))
+            ),
+        )
 
-  def testUploadLuci(self):
-    self._CreateLogFile(
-        'compiler_proxy', datetime.datetime(2017, 4, 26, 12, 0, 0))
-    self._CreateLogFile(
-        'compiler_proxy-subproc', datetime.datetime(2017, 4, 26, 12, 0, 0))
-    self._CreateLogFile(
-        'gomacc', datetime.datetime(2017, 4, 26, 12, 1, 0))
-    self._CreateLogFile(
-        'gomacc', datetime.datetime(2017, 4, 26, 12, 2, 0))
+        goma_util.GomaLogUploader(
+            self.tempdir,
+            today=datetime.date(2017, 4, 26),
+            dry_run=True,
+            cbb_config_name="test_config",
+        ).Upload()
 
-    # Set env vars.
-    envs = (
-        'BUILDBOT_BUILDERNAME',
-        'BUILDBOT_MASTERNAME',
-        'BUILDBOT_SLAVENAME',
-        'BUILDBOT_CLOBBER',
-    )
-    for env in envs:
-      if env in os.environ:
-        del os.environ[env]
+        expect_builderinfo = json.dumps(
+            collections.OrderedDict(
+                [
+                    ("builder", "builder-name"),
+                    ("master", "master-name"),
+                    ("slave", "slave-name"),
+                    ("clobber", True),
+                    ("os", "chromeos"),
+                    ("is_luci", False),
+                    ("cbb_config_name", "test_config"),
+                ]
+            )
+        )
+        self.assertEqual(
+            copy_log,
+            [
+                (
+                    "gs://chrome-goma-log/2017/04/26/stub-host-name",
+                    (
+                        "compiler_proxy-subproc.host.log.INFO.20170426-120000."
+                        "000000.gz"
+                    ),
+                    ["x-goog-meta-builderinfo:" + expect_builderinfo],
+                ),
+                (
+                    "gs://chrome-goma-log/2017/04/26/stub-host-name",
+                    "compiler_proxy.host.log.INFO.20170426-120000.000000.gz",
+                    ["x-goog-meta-builderinfo:" + expect_builderinfo],
+                ),
+                (
+                    "gs://chrome-goma-log/2017/04/26/stub-host-name",
+                    "gomacc.host.log.INFO.20170426-120100.000000.tar.gz",
+                    ["x-goog-meta-builderinfo:" + expect_builderinfo],
+                ),
+            ],
+        )
+        self.tarball_mock.assert_called_once()
 
-    os.environ.update({
-        'GLOG_log_dir': self.tempdir,
-    })
+    def testUploadLuci(self):
+        self._CreateLogFile(
+            "compiler_proxy", datetime.datetime(2017, 4, 26, 12, 0, 0)
+        )
+        self._CreateLogFile(
+            "compiler_proxy-subproc", datetime.datetime(2017, 4, 26, 12, 0, 0)
+        )
+        self._CreateLogFile("gomacc", datetime.datetime(2017, 4, 26, 12, 1, 0))
+        self._CreateLogFile("gomacc", datetime.datetime(2017, 4, 26, 12, 2, 0))
 
-    self.PatchObject(cros_build_lib, 'GetHostName', lambda: 'dummy-host-name')
-    copy_log = []
-    self.PatchObject(
-        gs.GSContext, 'CopyInto',
-        lambda _, __, remote_dir, filename=None, **kwargs: copy_log.append(
-            (remote_dir, filename, kwargs.get('headers'))))
+        # Set env vars.
+        envs = (
+            "BUILDBOT_BUILDERNAME",
+            "BUILDBOT_MASTERNAME",
+            "BUILDBOT_SLAVENAME",
+            "BUILDBOT_CLOBBER",
+        )
+        for env in envs:
+            if env in os.environ:
+                del os.environ[env]
 
-    goma_util.GomaLogUploader(self.tempdir, today=datetime.date(2017, 4, 26),
-                              dry_run=True,
-                              cbb_config_name='test_config').Upload()
+        os.environ.update(
+            {
+                "GLOG_log_dir": str(self.tempdir),
+            }
+        )
 
-    builderinfo = collections.OrderedDict([
-        ('builder', ''),
-        ('master', ''),
-        ('slave', ''),
-        ('clobber', False),
-        ('os', 'chromeos'),
-        ('is_luci', True),
-        ('cbb_config_name', 'test_config'),
-    ])
-    builderinfo['builder_id'] = collections.OrderedDict([
-        ('project', 'chromeos'),
-        ('builder', 'Prod'),
-        ('bucket', 'general'),
-    ])
+        self.PatchObject(
+            hostname_util, "get_host_name", lambda: "stub-host-name"
+        )
+        copy_log = []
+        self.PatchObject(
+            gs.GSContext,
+            "CopyInto",
+            lambda _, __, remote_dir, filename=None, **kwargs: copy_log.append(
+                (remote_dir, filename, kwargs.get("headers"))
+            ),
+        )
 
-    expect_builderinfo = json.dumps(builderinfo)
-    self.assertEqual(
-        copy_log,
-        [('gs://chrome-goma-log/2017/04/26/dummy-host-name',
-          'compiler_proxy-subproc.host.log.INFO.20170426-120000.000000.gz',
-          ['x-goog-meta-builderinfo:' + expect_builderinfo]),
-         ('gs://chrome-goma-log/2017/04/26/dummy-host-name',
-          'compiler_proxy.host.log.INFO.20170426-120000.000000.gz',
-          ['x-goog-meta-builderinfo:' + expect_builderinfo]),
-         ('gs://chrome-goma-log/2017/04/26/dummy-host-name',
-          'gomacc.host.log.INFO.20170426-120100.000000.tar.gz',
-          ['x-goog-meta-builderinfo:' + expect_builderinfo]),
-        ])
+        goma_util.GomaLogUploader(
+            self.tempdir,
+            today=datetime.date(2017, 4, 26),
+            dry_run=True,
+            cbb_config_name="test_config",
+        ).Upload()
 
-  def testNinjaLogUpload(self):
-    self._CreateLogFile(
-        'compiler_proxy', datetime.datetime(2017, 8, 21, 12, 0, 0))
-    self._CreateLogFile(
-        'compiler_proxy-subproc', datetime.datetime(2017, 8, 21, 12, 0, 0))
+        builderinfo = collections.OrderedDict(
+            [
+                ("builder", ""),
+                ("master", ""),
+                ("slave", ""),
+                ("clobber", False),
+                ("os", "chromeos"),
+                ("is_luci", True),
+                ("cbb_config_name", "test_config"),
+            ]
+        )
+        builderinfo["builder_id"] = collections.OrderedDict(
+            [
+                ("project", "chromeos"),
+                ("builder", "Prod"),
+                ("bucket", "general"),
+            ]
+        )
 
-    ninja_log_path = os.path.join(self.tempdir, 'ninja_log')
-    osutils.WriteFile(ninja_log_path, 'Ninja Log Content\n')
-    timestamp = datetime.datetime(2017, 8, 21, 12, 0, 0)
-    mtime = time.mktime(timestamp.timetuple())
-    os.utime(ninja_log_path, ((time.time(), mtime)))
+        expect_builderinfo = json.dumps(builderinfo)
+        self.assertEqual(
+            copy_log,
+            [
+                (
+                    "gs://chrome-goma-log/2017/04/26/stub-host-name",
+                    (
+                        "compiler_proxy-subproc.host.log.INFO.20170426-120000."
+                        "000000.gz"
+                    ),
+                    ["x-goog-meta-builderinfo:" + expect_builderinfo],
+                ),
+                (
+                    "gs://chrome-goma-log/2017/04/26/stub-host-name",
+                    "compiler_proxy.host.log.INFO.20170426-120000.000000.gz",
+                    ["x-goog-meta-builderinfo:" + expect_builderinfo],
+                ),
+                (
+                    "gs://chrome-goma-log/2017/04/26/stub-host-name",
+                    "gomacc.host.log.INFO.20170426-120100.000000.tar.gz",
+                    ["x-goog-meta-builderinfo:" + expect_builderinfo],
+                ),
+            ],
+        )
+        self.tarball_mock.assert_called_once()
 
-    osutils.WriteFile(
-        os.path.join(self.tempdir, 'ninja_command'), 'ninja_command')
-    osutils.WriteFile(
-        os.path.join(self.tempdir, 'ninja_cwd'), 'ninja_cwd')
-    osutils.WriteFile(
-        os.path.join(self.tempdir, 'ninja_env'),
-        'key1=value1\0key2=value2\0')
-    osutils.WriteFile(
-        os.path.join(self.tempdir, 'ninja_exit'), '0')
+    def testNinjaLogUpload(self):
+        self._CreateLogFile(
+            "compiler_proxy", datetime.datetime(2017, 8, 21, 12, 0, 0)
+        )
+        self._CreateLogFile(
+            "compiler_proxy-subproc", datetime.datetime(2017, 8, 21, 12, 0, 0)
+        )
 
-    self.PatchObject(cros_build_lib, 'GetHostName', lambda: 'dummy-host-name')
-    copy_log = []
-    self.PatchObject(
-        gs.GSContext, 'CopyInto',
-        lambda _, __, remote_dir, filename=None, **kwargs: copy_log.append(
-            (remote_dir, filename)))
+        ninja_log_path = os.path.join(self.tempdir, "ninja_log")
+        osutils.WriteFile(ninja_log_path, "Ninja Log Content\n")
+        timestamp = datetime.datetime(2017, 8, 21, 12, 0, 0)
+        mtime = time.mktime(timestamp.timetuple())
+        os.utime(ninja_log_path, ((time.time(), mtime)))
 
-    goma_util.GomaLogUploader(self.tempdir, today=datetime.date(2017, 8, 21),
-                              dry_run=True).Upload()
+        osutils.WriteFile(
+            os.path.join(self.tempdir, "ninja_command"), "ninja_command"
+        )
+        osutils.WriteFile(os.path.join(self.tempdir, "ninja_cwd"), "ninja_cwd")
+        osutils.WriteFile(
+            os.path.join(self.tempdir, "ninja_env"),
+            "key1=value1\0key2=value2\0",
+        )
+        osutils.WriteFile(os.path.join(self.tempdir, "ninja_exit"), "0")
 
-    username = getpass.getuser()
-    pid = os.getpid()
-    upload_filename = 'ninja_log.%s.dummy-host-name.20170821-120000.%d' % (
-        username, pid)
-    self.assertEqual(
-        copy_log,
-        [('gs://chrome-goma-log/2017/08/21/dummy-host-name',
-          'compiler_proxy-subproc.host.log.INFO.20170821-120000.000000.gz'),
-         ('gs://chrome-goma-log/2017/08/21/dummy-host-name',
-          'compiler_proxy.host.log.INFO.20170821-120000.000000.gz'),
-         ('gs://chrome-goma-log/2017/08/21/dummy-host-name',
-          upload_filename + '.gz'),
-        ])
+        self.PatchObject(
+            hostname_util, "get_host_name", lambda: "stub-host-name"
+        )
+        copy_log = []
+        self.PatchObject(
+            gs.GSContext,
+            "CopyInto",
+            lambda _, __, remote_dir, filename=None, **kwargs: copy_log.append(
+                (remote_dir, filename)
+            ),
+        )
 
-    # Verify content of ninja_log file.
-    ninja_log_content = osutils.ReadFile(
-        os.path.join(self.tempdir, upload_filename))
-    content, eof, metadata_json = ninja_log_content.split('\n', 3)
-    self.assertEqual('Ninja Log Content', content)
-    self.assertEqual('# end of ninja log', eof)
-    metadata = json.loads(metadata_json)
-    self.assertEqual(
-        metadata,
-        {
-            'platform': 'chromeos',
-            'cmdline': ['ninja_command'],
-            'cwd': 'ninja_cwd',
-            'exit': 0,
-            'env': {'key1': 'value1', 'key2': 'value2'},
-            'compiler_proxy_info':
-            'compiler_proxy.host.log.INFO.20170821-120000.000000'
-        })
+        goma_util.GomaLogUploader(
+            self.tempdir, today=datetime.date(2017, 8, 21), dry_run=True
+        ).Upload()
 
+        username = getpass.getuser()
+        pid = os.getpid()
+        upload_filename = "ninja_log.%s.stub-host-name.20170821-120000.%d" % (
+            username,
+            pid,
+        )
+        self.assertEqual(
+            copy_log,
+            [
+                (
+                    "gs://chrome-goma-log/2017/08/21/stub-host-name",
+                    (
+                        "compiler_proxy-subproc.host.log.INFO.20170821-120000."
+                        "000000.gz"
+                    ),
+                ),
+                (
+                    "gs://chrome-goma-log/2017/08/21/stub-host-name",
+                    "compiler_proxy.host.log.INFO.20170821-120000.000000.gz",
+                ),
+                (
+                    "gs://chrome-goma-log/2017/08/21/stub-host-name",
+                    upload_filename + ".gz",
+                ),
+            ],
+        )
 
-class GomaTest(cros_test_lib.TempDirTestCase):
-  """Tests for the Goma object."""
-
-  def testExtraEnvCustomChroot(self):
-    """Test the chroot env building with a custom chroot location."""
-    goma_dir = os.path.join(self.tempdir, 'goma')
-    goma_client_json = os.path.join(self.tempdir, 'goma_client.json')
-    chroot_dir = os.path.join(self.tempdir, 'chroot')
-    chroot_tmp = os.path.join(chroot_dir, 'tmp')
-    log_dir = os.path.join(chroot_tmp, 'log_dir')
-    stats_filename = 'stats_filename'
-    counterz_filename = 'counterz_filename'
-
-    osutils.Touch(goma_client_json)
-    osutils.SafeMakedirs(goma_dir)
-    osutils.SafeMakedirs(chroot_tmp)
-
-    goma = goma_util.Goma(goma_dir, goma_client_json, chroot_dir=chroot_dir,
-                          log_dir=log_dir, stats_filename=stats_filename,
-                          counterz_filename=counterz_filename)
-
-    env = goma.GetExtraEnv()
-    chroot_env = goma.GetChrootExtraEnv()
-
-    # Make sure the chroot paths got translated.
-    self.assertStartsWith(chroot_env['GOMA_TMP_DIR'], '/tmp')
-    self.assertStartsWith(chroot_env['GLOG_log_dir'], '/tmp/log_dir')
-    # Make sure the non-chroot paths didn't get translated.
-    self.assertStartsWith(env['GOMA_TMP_DIR'], chroot_tmp)
-    self.assertStartsWith(env['GLOG_log_dir'], log_dir)
-    # Make sure they're based on the same path.
-    self.assertEndsWith(env['GOMA_TMP_DIR'], chroot_env['GOMA_TMP_DIR'])
-    self.assertEndsWith(env['GLOG_log_dir'], chroot_env['GLOG_log_dir'])
-    # Make sure the stats file gets set correctly.
-    self.assertStartsWith(env['GOMA_DUMP_STATS_FILE'], log_dir)
-    self.assertEndsWith(env['GOMA_DUMP_STATS_FILE'], stats_filename)
-    self.assertStartsWith(chroot_env['GOMA_DUMP_STATS_FILE'], '/tmp/log_dir')
-    self.assertEndsWith(chroot_env['GOMA_DUMP_STATS_FILE'], stats_filename)
-    self.assertEndsWith(env['GOMA_DUMP_STATS_FILE'],
-                        chroot_env['GOMA_DUMP_STATS_FILE'])
-    # Make sure the counterz file gets set correctly.
-    self.assertStartsWith(env['GOMA_DUMP_COUNTERZ_FILE'], log_dir)
-    self.assertEndsWith(env['GOMA_DUMP_COUNTERZ_FILE'], counterz_filename)
-    self.assertStartsWith(chroot_env['GOMA_DUMP_COUNTERZ_FILE'], '/tmp/log_dir')
-    self.assertEndsWith(chroot_env['GOMA_DUMP_COUNTERZ_FILE'],
-                        counterz_filename)
-    self.assertEndsWith(env['GOMA_DUMP_COUNTERZ_FILE'],
-                        chroot_env['GOMA_DUMP_COUNTERZ_FILE'])
-
-
-  def testExtraEnvGomaApproach(self):
-    """Test the chroot env building with a goma approach."""
-    goma_dir = os.path.join(self.tempdir, 'goma')
-    goma_client_json = os.path.join(self.tempdir, 'goma_client.json')
-    chroot_dir = os.path.join(self.tempdir, 'chroot')
-    chroot_tmp = os.path.join(chroot_dir, 'tmp')
-    osutils.Touch(goma_client_json)
-    osutils.SafeMakedirs(goma_dir)
-    osutils.SafeMakedirs(chroot_tmp)
-    goma_approach = goma_util.GomaApproach('foo', 'bar', True)
-
-    goma = goma_util.Goma(goma_dir, goma_client_json,
-                          chroot_dir=chroot_dir, goma_approach=goma_approach)
-
-    env = goma.GetExtraEnv()
-
-    # Make sure the extra environment specified by goma_approach is present.
-    self.assertEqual(env['GOMA_RPC_EXTRA_PARAMS'], 'foo')
-    self.assertEqual(env['GOMA_SERVER_HOST'], 'bar')
-    self.assertEqual(env['GOMA_ARBITRARY_TOOLCHAIN_SUPPORT'], 'true')
+        # Verify content of ninja_log file.
+        ninja_log_content = osutils.ReadFile(
+            os.path.join(self.tempdir, upload_filename)
+        )
+        content, eof, metadata_json = ninja_log_content.split("\n", 3)
+        self.assertEqual("Ninja Log Content", content)
+        self.assertEqual("# end of ninja log", eof)
+        metadata = json.loads(metadata_json)
+        self.assertEqual(
+            metadata,
+            {
+                "platform": "chromeos",
+                "cmdline": ["ninja_command"],
+                "cwd": "ninja_cwd",
+                "exit": 0,
+                "env": {"key1": "value1", "key2": "value2"},
+                "compiler_proxy_info": (
+                    "compiler_proxy.host.log.INFO.20170821-120000.000000"
+                ),
+            },
+        )

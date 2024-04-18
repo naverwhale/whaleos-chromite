@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 # Set PROGram name
@@ -57,8 +57,8 @@ DRYRUN=false
 looseargs=()
 for arg in ${LOOSEARGS}; do
   case ${arg} in
-  -n) DRYRUN=true ;;
-  *) looseargs+=( "${arg}" ) ;;
+    -n) DRYRUN=true ;;
+    *) looseargs+=("${arg}") ;;
   esac
 done
 if ${DRYRUN}; then
@@ -85,14 +85,14 @@ expand_key_name() {
   fi
 
   case ${key} in
-  premp|mp|mp-v[0-9]*)
-    # If they specify "mp", automatically prepend the board name so
-    # we get something like "stumpy-mp".
-    echo "${BOARD#*-}-${key}"
-    ;;
-  *)
-    echo "${key}"
-    ;;
+    premp | mp | mp-v[0-9]*)
+      # If they specify "mp", automatically prepend the board name so
+      # we get something like "stumpy-mp".
+      echo "${BOARD#*-}-${key}"
+      ;;
+    *)
+      echo "${key}"
+      ;;
   esac
 }
 ORIG_KEY=${looseargs[4]}
@@ -134,7 +134,7 @@ GSUTIL=$(FindGSUTIL) || Exit 1 "Unable to find gsutil executable!"
 GSCp() {
   local lfrom=$1
   local lto=$2
-  local cmd=( "${GSUTIL}" cp "${lfrom}" "${lto}" )
+  local cmd=("${GSUTIL}" cp "${lfrom}" "${lto}")
 
   if ${DRYRUN}; then
     if [[ ${lto} == gs:* ]]; then
@@ -149,7 +149,7 @@ GSCp() {
 }
 
 LOCALSIGN="/tmp/${PROG}-tbs.$$"
-DumpRunTimeEnv > "${LOCALSIGN}"
+DumpRunTimeEnv >"${LOCALSIGN}"
 
 # Working off of instructions files only, derive file names for all other
 # operations

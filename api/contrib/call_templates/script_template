@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -16,9 +16,9 @@ CONFIG="./config.json"
 if [ ! -e "${INPUT}" ]; then
   echo "Input file not found: ${INPUT}."
   exit 1
-fi;
+fi
 
-echo "" > "${OUTPUT}"
+echo "" >"${OUTPUT}"
 echo "Running ${ENDPOINT}"
 ../../../bin/build_api "${ENDPOINT}" \
   --input-json "${INPUT}" \
@@ -31,7 +31,7 @@ echo "Completed ${ENDPOINT}"
 
 if [ "${RESULT}" -eq 0 ]; then
   echo "Success!"
-fi;
+fi
 
 echo "Return Code: ${RESULT}"
 echo "Result:"

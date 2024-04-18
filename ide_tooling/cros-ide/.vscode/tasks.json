@@ -1,0 +1,33 @@
+// See https://go.microsoft.com/fwlink/?LinkId=733558
+// for the documentation about the tasks.json format
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "npm build",
+      "detail": "Build the extension in a development configuration",
+      "type": "npm",
+      "script": "build",
+      "problemMatcher": ["$ts-webpack", "$tslint-webpack"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "npm build-all",
+      "detail": "Build the extension and tests in a development configuration",
+      "type": "npm",
+      "script": "build-all",
+      "group": "build"
+    },
+    {
+      "label": "npm fix",
+      "detail": "Fix lint issues automatically",
+      "type": "npm",
+      "script": "fix",
+      "problemMatcher": [],
+      "group": "none"
+    }
+  ]
+}

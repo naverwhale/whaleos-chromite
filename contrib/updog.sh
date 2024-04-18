@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -13,7 +13,7 @@ gcertstatus >&/dev/null || gcert
 dremel \
   --min_completion_ratio 1 \
   --output csv \
-  << SQLtoHERE
+  <<SQLtoHERE
 SELECT
   package_name,
   ARRAY_CONCAT(board_name) AS boards
@@ -42,4 +42,3 @@ FROM
 WHERE
   package_name LIKE '%${package_name}%';
 SQLtoHERE
-

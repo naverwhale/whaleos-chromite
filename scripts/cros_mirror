@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -38,7 +38,7 @@ die() {
 }
 
 _pushd() { pushd "$@" >/dev/null; }
-_popd()  { popd "$@" >/dev/null; }
+_popd() { popd "$@" >/dev/null; }
 
 #
 # Process user flags.
@@ -84,16 +84,28 @@ ROOT=
 URL=
 while [[ $# -gt 0 ]]; do
   case $1 in
-  --external)       MANIFEST_URL=${MANIFEST_URL_EXT};;
-  --internal)       MANIFEST_URL=${MANIFEST_URL_INT};;
-  -j|--jobs)        JOBS=$2; shift;;
-  -q|--quiet)       QUIET="-q";;
-  -r|--root)        ROOT=$2; shift;;
-  -u|--url)         URL=$2; shift;;
-  -m|--manifest)    MANIFEST_NAME=$2; shift;;
-  -h|--help)        usage;;
-  -x)               set -x;;
-  *)                usage 1;;
+    --external) MANIFEST_URL=${MANIFEST_URL_EXT} ;;
+    --internal) MANIFEST_URL=${MANIFEST_URL_INT} ;;
+    -j | --jobs)
+      JOBS=$2
+      shift
+      ;;
+    -q | --quiet) QUIET="-q" ;;
+    -r | --root)
+      ROOT=$2
+      shift
+      ;;
+    -u | --url)
+      URL=$2
+      shift
+      ;;
+    -m | --manifest)
+      MANIFEST_NAME=$2
+      shift
+      ;;
+    -h | --help) usage ;;
+    -x) set -x ;;
+    *) usage 1 ;;
   esac
   shift
 done
@@ -112,7 +124,7 @@ cd "${ROOT}"
 #
 if ! which repo >/dev/null; then
   die "you must have repo installed and in your \$PATH; please see:" \
-      "https://dev.chromium.org/developers/how-tos/install-depot-tools"
+    "https://dev.chromium.org/developers/how-tos/install-depot-tools"
 fi
 # This has been tested against 1.7.7.x, so require at least that.
 if ! gver=$(git --version); then
@@ -121,16 +133,18 @@ fi
 bver="1.7.7"
 ver_to_int() {
   local v i=0
-  local ver=( $(echo $(IFS=.; echo $*)) )
+  local ver=($(echo $(
+    IFS=.
+    echo $*
+  )))
   for v in 0 1 2; do
-    : $(( i = (i << 8) | ${ver[v]} ))
+    : $((i = (i << 8) | ${ver[v]}))
   done
   echo ${i}
 }
 if [[ $(ver_to_int "${bver}") -gt $(ver_to_int "${gver##* }") ]]; then
   die "your git version is too old (${gver}); we require at least git ${bver}"
 fi
-
 
 #
 # Initialize the whole tree mirror style.
@@ -146,13 +160,22 @@ else
   # Allow people to change manifests on the fly (internal<->external).
   CURRENT_URL=$(git --git-dir=.repo/manifests.git config remote.origin.url)
   # Find the previously defined manifest name by following the symbolic link.
-  CURRENT_NAME=$(readlink .repo/manifest.xml)
-  # Strip off the "manifests/" prefix.
-  CURRENT_NAME=${CURRENT_NAME#manifests/}
+  # Old repo versions made a symlink.  Newer ones generate a file.
+  if [[ -L .repo/manifest.xml ]]; then
+    CURRENT_NAME=$(readlink .repo/manifest.xml)
+    # Strip off the "manifests/" prefix.
+    CURRENT_NAME=${CURRENT_NAME#manifests/}
+  else
+    # Look for the line:
+    # <include name="default.xml" />
+    CURRENT_NAME=$(
+      grep -o 'include name="[^"]*"' .repo/manifest.xml | cut -d'"' -f2
+    )
+  fi
   # If no manifest was selected, default to the current one.
   : ${MANIFEST_URL:=${CURRENT_URL}}
-  if [[ "${CURRENT_URL}" != "${MANIFEST_URL}" || \
-        "${CURRENT_NAME}" != "${MANIFEST_NAME}" ]]; then
+  if [[ "${CURRENT_URL}" != "${MANIFEST_URL}" ||
+    "${CURRENT_NAME}" != "${MANIFEST_NAME}" ]]; then
     info "re-initing due to URL or manifest change: \
       ${CURRENT_URL} -> ${MANIFEST_URL}, ${CURRENT_NAME} -> ${MANIFEST_NAME}"
     repo_init
@@ -182,11 +205,11 @@ update_manifests() {
   if [[ ${MANIFEST_URL} == "${MANIFEST_URL_INT}" ]]; then
     # Try to head off leakage of Google data.
     case ${URL} in
-    ssh://* | file://*) ;;
-    *)
-      die "You *must* use a secure channel like ssh:// or file://" \
+      ssh://* | file://*) ;;
+      *)
+        die "You *must* use a secure channel like ssh:// or file://" \
           "when mirroring internal Google repositories."
-      ;;
+        ;;
     esac
   fi
 
@@ -202,7 +225,10 @@ update_manifests() {
   git fetch ${QUIET}
   if [[ -z ${URL} ]]; then
     # Extract the local URI if they didn't specify one.
-    URL=$(eval $(grep -h fetch= *.xml); echo ${fetch})
+    URL=$(
+      eval $(grep -h fetch= *.xml)
+      echo ${fetch}
+    )
     if [[ ${URL} == "https://chromium.googlesource.com" ]]; then
       # Guess they want the current system.
       URL="git://${HOSTNAME}"
@@ -214,8 +240,8 @@ update_manifests() {
 
   # Setup the fetch= field of the manifest to point to our local mirror.
   local b branches=(
-    $(git ls-remote | sed 's:.*refs/heads/::' | egrep -v '\<(HEAD|^master)$')
-    "master"
+    $(git ls-remote | sed 's:.*refs/heads/::' | egrep -v '\<(HEAD|^main)$')
+    "main"
   )
   info "rewriting ${checkout} branches to ${URL}"
   for b in "${branches[@]}"; do

@@ -1,0 +1,45 @@
+{
+  "add_signed_off_by": true,
+  "ccs": [
+    {
+      "user": "cc@example.com"
+    }
+  ],
+  "downstream": {
+    "branch": "main",
+    "url": "https://chromium.googlesource.com/chromiumos/third_party/zephyr/"
+  },
+  "dry_run": true,
+  "exclude_file_patterns": [
+    {
+      "pattern": "temp/*"
+    }
+  ],
+  "keep_pseudoheaders": [
+    {
+      "name": "Cq-Depend"
+    }
+  ],
+  "labels": [
+    {
+      "label": "Verified+1"
+    }
+  ],
+  "merge_conflict_behavior": "MERGE_CONFLICT_BEHAVIOR_SKIP",
+  "prepend_subject": "[Subj]",
+  "push_options": [
+    {
+      "opt": "push-option"
+    }
+  ],
+  "reviewers": [
+    {
+      "user": "reviewers@example.com"
+    }
+  ],
+  "topic": "zephyr-downstream",
+  "upstream": {
+    "branch": "main",
+    "url": "https://github.com/zephyrproject-rtos/zephyr"
+  }
+}

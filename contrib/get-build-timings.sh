@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -13,7 +13,7 @@ gcertstatus >&/dev/null || gcert
 
 # Run the query.
 (f1-sql -quiet=1 -csv_output=1 \
-  | tr -d '"') << SQLtoHERE
+  | tr -d '"') <<SQLtoHERE
 SELECT
   board,
   pkg_phase,
@@ -40,4 +40,3 @@ FROM (
 WHERE
   pkg_phase NOT LIKE '%.sysroot.%';
 SQLtoHERE
-

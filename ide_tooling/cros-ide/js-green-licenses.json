@@ -1,0 +1,15 @@
+{
+  "greenLicenses": [
+    // We want to know exactly which 3rd party licenses we require,
+    // so we're making this list restrictive.
+    //
+    // New entries from the default list of green licences
+    // https://github.com/google/js-green-licenses#configurations
+    // can be added as needed.
+    "0BSD",
+    "MPL-2.0",
+    "MIT",
+    "ISC",
+    "BSD-3-Clause"
+  ]
+}

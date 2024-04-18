@@ -1,4 +1,4 @@
-# Copyright 2014 The Chromium OS Authors. All rights reserved.
+# Copyright 2014 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -8,6 +8,7 @@ import collections
 import json
 import sys
 import traceback
+from typing import List
 
 from chromite.lib import constants
 from chromite.lib import cros_build_lib
@@ -15,426 +16,529 @@ from chromite.lib import failure_message_lib
 
 
 class StepFailure(Exception):
-  """StepFailure exceptions indicate that a cbuildbot step failed.
+    """StepFailure exceptions indicate that a cbuildbot step failed.
 
-  Exceptions that derive from StepFailure should meet the following
-  criteria:
-    1) The failure indicates that a cbuildbot step failed.
-    2) The necessary information to debug the problem has already been
-       printed in the logs for the stage that failed.
-    3) __str__() should be brief enough to include in a Commit Queue
-       failure message.
-  """
-
-  # The constants.EXCEPTION_CATEGORY_ALL_CATEGORIES values that this exception
-  # maps to. Subclasses should redefine this class constant to map to a
-  # different category.
-  EXCEPTION_CATEGORY = constants.EXCEPTION_CATEGORY_UNKNOWN
-
-  def EncodeExtraInfo(self):
-    """Encode extra_info into a json string, can be overwritten by subclasses"""
-
-  def ConvertToStageFailureMessage(self, build_stage_id, stage_name,
-                                   stage_prefix_name=None):
-    """Convert StepFailure to StageFailureMessage.
-
-    Args:
-      build_stage_id: The id of the build stage.
-      stage_name: The name (string) of the failed stage.
-      stage_prefix_name: The prefix name (string) of the failed stage,
-          default to None.
-
-    Returns:
-      An instance of failure_message_lib.StageFailureMessage.
+    Exceptions that derive from StepFailure should meet the following
+    criteria:
+        1) The failure indicates that a cbuildbot step failed.
+        2) The necessary information to debug the problem has already been
+            printed in the logs for the stage that failed.
+        3) __str__() should be brief enough to include in a Commit Queue
+            failure message.
     """
-    stage_failure = failure_message_lib.StageFailure(
-        None, build_stage_id, None, self.__class__.__name__, str(self),
-        self.EXCEPTION_CATEGORY, self.EncodeExtraInfo(), None, stage_name,
-        None, None, None, None, None, None, None, None, None, None)
-    return failure_message_lib.StageFailureMessage(
-        stage_failure, stage_prefix_name=stage_prefix_name)
+
+    # The constants.EXCEPTION_CATEGORY_ALL_CATEGORIES values that this exception
+    # maps to. Subclasses should redefine this class constant to map to a
+    # different category.
+    EXCEPTION_CATEGORY = constants.EXCEPTION_CATEGORY_UNKNOWN
+
+    def EncodeExtraInfo(self):
+        """Encode extra_info into a json string.
+
+        Can be overwritten by subclasses.
+        """
+
+    def ConvertToStageFailureMessage(
+        self, build_stage_id, stage_name, stage_prefix_name=None
+    ):
+        """Convert StepFailure to StageFailureMessage.
+
+        Args:
+            build_stage_id: The id of the build stage.
+            stage_name: The name (string) of the failed stage.
+            stage_prefix_name: The prefix name (string) of the failed stage,
+                default to None.
+
+        Returns:
+            An instance of failure_message_lib.StageFailureMessage.
+        """
+        stage_failure = failure_message_lib.StageFailure(
+            None,
+            build_stage_id,
+            None,
+            self.__class__.__name__,
+            str(self),
+            self.EXCEPTION_CATEGORY,
+            self.EncodeExtraInfo(),
+            None,
+            stage_name,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        return failure_message_lib.StageFailureMessage(
+            stage_failure, stage_prefix_name=stage_prefix_name
+        )
 
 
 # A namedtuple to hold information of an exception.
-ExceptInfo = collections.namedtuple(
-    'ExceptInfo', ['type', 'str', 'traceback'])
+ExceptInfo = collections.namedtuple("ExceptInfo", ["type", "str", "traceback"])
 
 
 def CreateExceptInfo(exception, tb):
-  """Creates a list of ExceptInfo objects from |exception| and |tb|.
+    """Creates a list of ExceptInfo objects from |exception| and |tb|.
 
-  Creates an ExceptInfo object from |exception| and |tb|. If
-  |exception| is a CompoundFailure with non-empty list of exc_infos,
-  simly returns exception.exc_infos. Note that we do not preserve type
-  of |exception| in this case.
+    Creates an ExceptInfo object from |exception| and |tb|. If
+    |exception| is a CompoundFailure with non-empty list of exc_infos,
+    simply returns exception.exc_infos. Note that we do not preserve type
+    of |exception| in this case.
 
-  Args:
-    exception: The exception.
-    tb: The textual traceback.
+    Args:
+        exception: The exception.
+        tb: The textual traceback.
 
-  Returns:
-    A list of ExceptInfo objects.
-  """
-  if isinstance(exception, CompoundFailure) and exception.exc_infos:
-    return exception.exc_infos
+    Returns:
+        A list of ExceptInfo objects.
+    """
+    if isinstance(exception, CompoundFailure) and exception.exc_infos:
+        return exception.exc_infos
 
-  return [ExceptInfo(exception.__class__, str(exception), tb)]
+    return [ExceptInfo(exception.__class__, str(exception), tb)]
 
 
 class CompoundFailure(StepFailure):
-  """An exception that contains a list of ExceptInfo objects."""
+    """An exception that contains a list of ExceptInfo objects."""
 
-  def __init__(self, message='', exc_infos=None):
-    """Initializes an CompoundFailure instance.
+    def __init__(self, message="", exc_infos=None):
+        """Initializes an CompoundFailure instance.
 
-    Args:
-      message: A string describing the failure.
-      exc_infos: A list of ExceptInfo objects.
-    """
-    self.exc_infos = exc_infos if exc_infos else []
-    if not message:
-      # By default, print all stored ExceptInfo objects. This is the
-      # preferred behavior because we'd always have the full
-      # tracebacks to debug the failure.
-      message = '\n'.join('{e.type}: {e.str}\n{e.traceback}'.format(e=ex)
-                          for ex in self.exc_infos)
-    self.msg = message
+        Args:
+            message: A string describing the failure.
+            exc_infos: A list of ExceptInfo objects.
+        """
+        self.exc_infos = exc_infos if exc_infos else []
+        if not message:
+            # By default, print all stored ExceptInfo objects. This is the
+            # preferred behavior because we'd always have the full
+            # tracebacks to debug the failure.
+            message = "\n".join(
+                f"{ex.type}: {ex.str}\n{ex.traceback}" for ex in self.exc_infos
+            )
+        self.msg = message
 
-    super().__init__(message)
+        super().__init__(message)
 
-  def ToSummaryString(self):
-    """Returns a string with type and string of each ExceptInfo object.
+    def ToSummaryString(self):
+        """Returns a string with type and string of each ExceptInfo object.
 
-    This does not include the textual tracebacks on purpose, so the
-    message is more readable on the waterfall.
-    """
-    if self.HasEmptyList():
-      # Fall back to return self.message if list is empty.
-      return self.msg
-    else:
-      return '\n'.join(['%s: %s' % (e.type, e.str) for e in self.exc_infos])
+        This does not include the textual tracebacks on purpose, so the
+        message is more readable on the waterfall.
+        """
+        if self.HasEmptyList():
+            # Fall back to return self.message if list is empty.
+            return self.msg
+        else:
+            return "\n".join(
+                ["%s: %s" % (e.type, e.str) for e in self.exc_infos]
+            )
 
-  def HasEmptyList(self):
-    """Returns True if self.exc_infos is empty."""
-    return not bool(self.exc_infos)
+    def HasEmptyList(self):
+        """Returns True if self.exc_infos is empty."""
+        return not bool(self.exc_infos)
 
-  def HasFailureType(self, cls):
-    """Returns True if any of the failures matches |cls|."""
-    return any(issubclass(x.type, cls) for x in self.exc_infos)
+    def HasFailureType(self, cls):
+        """Returns True if any of the failures matches |cls|."""
+        return any(issubclass(x.type, cls) for x in self.exc_infos)
 
-  def MatchesFailureType(self, cls):
-    """Returns True if all failures matches |cls|."""
-    return (not self.HasEmptyList() and
-            all(issubclass(x.type, cls) for x in self.exc_infos))
+    def MatchesFailureType(self, cls):
+        """Returns True if all failures matches |cls|."""
+        return not self.HasEmptyList() and all(
+            issubclass(x.type, cls) for x in self.exc_infos
+        )
 
-  def HasFatalFailure(self, whitelist=None):
-    """Determine if there are non-whitlisted failures.
+    def HasFatalFailure(self, exempt_exception_list=None):
+        """Determine if there are non-exempted failures.
 
-    Args:
-      whitelist: A list of whitelisted exception types.
+        Args:
+            exempt_exception_list: A list of exempted exception types.
 
-    Returns:
-      Returns True if any failure is not in |whitelist|.
-    """
-    if not whitelist:
-      return not self.HasEmptyList()
+        Returns:
+            Returns True if any failure is not in |exempt_exception_list|.
+        """
+        if not exempt_exception_list:
+            return not self.HasEmptyList()
 
-    for ex in self.exc_infos:
-      if all(not issubclass(ex.type, cls) for cls in whitelist):
-        return True
+        for ex in self.exc_infos:
+            if all(
+                not issubclass(ex.type, cls) for cls in exempt_exception_list
+            ):
+                return True
 
-    return False
+        return False
 
-  def ConvertToStageFailureMessage(self, build_stage_id, stage_name,
-                                   stage_prefix_name=None):
-    """Convert CompoundFailure to StageFailureMessage.
+    def ConvertToStageFailureMessage(
+        self, build_stage_id, stage_name, stage_prefix_name=None
+    ):
+        """Convert CompoundFailure to StageFailureMessage.
 
-    Args:
-      build_stage_id: The id of the build stage.
-      stage_name: The name (string) of the failed stage.
-      stage_prefix_name: The prefix name (string) of the failed stage,
-          default to None.
+        Args:
+            build_stage_id: The id of the build stage.
+            stage_name: The name (string) of the failed stage.
+            stage_prefix_name: The prefix name (string) of the failed stage,
+                default to None.
 
-    Returns:
-      An instance of failure_message_lib.StageFailureMessage.
-    """
-    stage_failure = failure_message_lib.StageFailure(
-        None, build_stage_id, None, self.__class__.__name__, str(self),
-        self.EXCEPTION_CATEGORY, self.EncodeExtraInfo(), None, stage_name,
-        None, None, None, None, None, None, None, None, None, None)
-    compound_failure_message = failure_message_lib.CompoundFailureMessage(
-        stage_failure, stage_prefix_name=stage_prefix_name)
+        Returns:
+            An instance of failure_message_lib.StageFailureMessage.
+        """
+        stage_failure = failure_message_lib.StageFailure(
+            None,
+            build_stage_id,
+            None,
+            self.__class__.__name__,
+            str(self),
+            self.EXCEPTION_CATEGORY,
+            self.EncodeExtraInfo(),
+            None,
+            stage_name,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        compound_failure_message = failure_message_lib.CompoundFailureMessage(
+            stage_failure, stage_prefix_name=stage_prefix_name
+        )
 
-    for exc_class, exc_str, _ in self.exc_infos:
-      inner_failure = failure_message_lib.StageFailure(
-          None, build_stage_id, None, exc_class.__name__, exc_str,
-          GetExceptionCategory(exc_class), None, None, stage_name,
-          None, None, None, None, None, None, None, None, None, None)
-      innner_failure_message = failure_message_lib.StageFailureMessage(
-          inner_failure, stage_prefix_name=stage_prefix_name)
-      compound_failure_message.inner_failures.append(innner_failure_message)
+        for exc_class, exc_str, _ in self.exc_infos:
+            inner_failure = failure_message_lib.StageFailure(
+                None,
+                build_stage_id,
+                None,
+                exc_class.__name__,
+                exc_str,
+                GetExceptionCategory(exc_class),
+                None,
+                None,
+                stage_name,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            innner_failure_message = failure_message_lib.StageFailureMessage(
+                inner_failure, stage_prefix_name=stage_prefix_name
+            )
+            compound_failure_message.inner_failures.append(
+                innner_failure_message
+            )
 
-    return compound_failure_message
+        return compound_failure_message
 
 
 class ExitEarlyException(Exception):
-  """Exception when a stage finishes and exits early."""
+    """Exception when a stage finishes and exits early."""
+
 
 # ExitEarlyException is to simulate sys.exit(0), and SystemExit derives
 # from BaseException, so should not catch ExitEarlyException as Exception
 # and reset type to re-raise.
 EXCEPTIONS_TO_EXCLUDE = (ExitEarlyException,)
 
-class SetFailureType(object):
-  """A wrapper to re-raise the exception as the pre-set type."""
 
-  def __init__(self, category_exception, source_exception=None,
-               exclude_exceptions=EXCEPTIONS_TO_EXCLUDE):
-    """Initializes the decorator.
+class SetFailureType:
+    """A wrapper to re-raise the exception as the pre-set type."""
 
-    Args:
-      category_exception: The exception type to re-raise as. It must be
-        a subclass of CompoundFailure.
-      source_exception: The exception types to re-raise. By default, re-raise
-        all Exception classes.
-      exclude_exceptions: Do not set the type of the exception if it's subclass
-        of one exception in exclude_exceptions. Default to EXCLUSIVE_EXCEPTIONS.
-    """
-    assert issubclass(category_exception, CompoundFailure)
-    self.category_exception = category_exception
-    self.source_exception = source_exception
-    if self.source_exception is None:
-      self.source_exception = Exception
-    self.exclude_exceptions = exclude_exceptions
+    def __init__(
+        self,
+        category_exception,
+        source_exception=None,
+        exclude_exceptions=EXCEPTIONS_TO_EXCLUDE,
+    ):
+        """Initializes the decorator.
 
-  def __call__(self, functor):
-    """Returns a wrapped function."""
-    def wrapped_functor(*args, **kwargs):
-      try:
-        return functor(*args, **kwargs)
-      except self.source_exception:
-        # Get the information about the original exception.
-        exc_type, exc_value, _ = sys.exc_info()
-        exc_traceback = traceback.format_exc()
-        if self.exclude_exceptions is not None:
-          for exclude_exception in self.exclude_exceptions:
-            if issubclass(exc_type, exclude_exception):
-              raise
-        if issubclass(exc_type, self.category_exception):
-          # Do not re-raise if the exception is a subclass of the set
-          # exception type because it offers more information.
-          raise
-        else:
-          exc_infos = CreateExceptInfo(exc_value, exc_traceback)
-          raise self.category_exception(exc_infos=exc_infos)
+        Args:
+            category_exception: The exception type to re-raise as. It must be
+                a subclass of CompoundFailure.
+            source_exception: The exception types to re-raise. By default,
+                re-raise all Exception classes.
+            exclude_exceptions: Do not set the type of the exception if it's
+                subclass of one exception in exclude_exceptions. Default to
+                EXCLUSIVE_EXCEPTIONS.
+        """
+        assert issubclass(category_exception, CompoundFailure)
+        self.category_exception = category_exception
+        self.source_exception = source_exception
+        if self.source_exception is None:
+            self.source_exception = Exception
+        self.exclude_exceptions = exclude_exceptions
 
-    return wrapped_functor
+    def __call__(self, functor):
+        """Returns a wrapped function."""
+
+        def wrapped_functor(*args, **kwargs):
+            try:
+                return functor(*args, **kwargs)
+            except self.source_exception:
+                # Get the information about the original exception.
+                exc_type, exc_value, _ = sys.exc_info()
+                exc_traceback = traceback.format_exc()
+                if self.exclude_exceptions is not None:
+                    for exclude_exception in self.exclude_exceptions:
+                        if issubclass(exc_type, exclude_exception):
+                            raise
+                if issubclass(exc_type, self.category_exception):
+                    # Do not re-raise if the exception is a subclass of the set
+                    # exception type because it offers more information.
+                    raise
+                else:
+                    exc_infos = CreateExceptInfo(exc_value, exc_traceback)
+                    raise self.category_exception(exc_infos=exc_infos)
+
+        return wrapped_functor
 
 
 class RetriableStepFailure(StepFailure):
-  """This exception is thrown when a step failed, but should be retried."""
+    """This exception is thrown when a step failed, but should be retried."""
 
 
 # TODO(nxia): Everytime the class name is changed, add the new class name to
 # BUILD_SCRIPT_FAILURE_TYPES.
 class BuildScriptFailure(StepFailure):
-  """This exception is thrown when a build command failed.
+    """This exception is thrown when a build command failed.
 
-  It is intended to provide a shorter summary of what command failed,
-  for usage in failure messages from the Commit Queue, so as to ensure
-  that developers aren't spammed with giant error messages when common
-  commands (e.g. build_packages) fail.
-  """
-
-  EXCEPTION_CATEGORY = constants.EXCEPTION_CATEGORY_BUILD
-
-  def __init__(self, exception, shortname):
-    """Construct a BuildScriptFailure object.
-
-    Args:
-      exception: A RunCommandError object.
-      shortname: Short name for the command we're running.
+    It is intended to provide a shorter summary of what command failed,
+    for usage in failure messages from the Commit Queue, so as to ensure
+    that developers aren't spammed with giant error messages when common
+    commands (e.g. cros build-packages) fail.
     """
-    StepFailure.__init__(self)
-    assert isinstance(exception, cros_build_lib.RunCommandError)
-    self.exception = exception
-    self.shortname = shortname
-    self.args = (exception, shortname)
 
-  def __str__(self):
-    """Summarize a build command failure briefly."""
-    result = self.exception.result
-    if result.returncode:
-      return '%s failed (code=%s)' % (self.shortname, result.returncode)
-    else:
-      return self.exception.msg
+    EXCEPTION_CATEGORY = constants.EXCEPTION_CATEGORY_BUILD
 
-  def EncodeExtraInfo(self):
-    """Encode extra_info into a json string.
+    def __init__(self, exception, shortname):
+        """Construct a BuildScriptFailure object.
 
-    Returns:
-      A json string containing shortname.
-    """
-    extra_info_dict = {
-        'shortname': self.shortname,
-    }
-    return json.dumps(extra_info_dict)
+        Args:
+            exception: A RunCommandError object.
+            shortname: Short name for the command we're running.
+        """
+        StepFailure.__init__(self)
+        assert isinstance(exception, cros_build_lib.RunCommandError)
+        self.exception = exception
+        self.shortname = shortname
+        self.args = (exception, shortname)
+
+    def __str__(self):
+        """Summarize a build command failure briefly."""
+        result = self.exception.result
+        if result.returncode:
+            return "%s failed (code=%s)" % (self.shortname, result.returncode)
+        else:
+            return self.exception.msg
+
+    def EncodeExtraInfo(self):
+        """Encode extra_info into a json string.
+
+        Returns:
+            A json string containing shortname.
+        """
+        extra_info_dict = {
+            "shortname": self.shortname,
+        }
+        return json.dumps(extra_info_dict)
 
 
 # TODO(nxia): Everytime the class name is changed, add the new class name to
 # PACKAGE_BUILD_FAILURE_TYPES
 class PackageBuildFailure(BuildScriptFailure):
-  """This exception is thrown when packages fail to build."""
+    """This exception is thrown when packages fail to build."""
 
-  def __init__(self, exception, shortname, failed_packages):
-    """Construct a PackageBuildFailure object.
+    def __init__(
+        self,
+        exception: cros_build_lib.RunCommandError,
+        shortname: str,
+        failed_packages: List[str],
+    ):
+        """Construct a PackageBuildFailure object.
 
-    Args:
-      exception: The underlying exception.
-      shortname: Short name for the command we're running.
-      failed_packages: List of packages that failed to build.
-    """
-    BuildScriptFailure.__init__(self, exception, shortname)
-    self.failed_packages = set(failed_packages)
-    self.args = (exception, shortname, failed_packages)
+        Args:
+            exception: The underlying exception.
+            shortname: Short name for the command we're running.
+            failed_packages: List of packages that failed to build.
+        """
+        BuildScriptFailure.__init__(self, exception, shortname)
+        self.failed_packages = set(failed_packages)
+        self.args = (exception, shortname, failed_packages)
 
-  def __str__(self):
-    return ('Packages failed in %s: %s'
-            % (self.shortname, ' '.join(sorted(self.failed_packages))))
+    def __str__(self):
+        return "Packages failed in %s: %s" % (
+            self.shortname,
+            " ".join(sorted(self.failed_packages)),
+        )
 
-  def EncodeExtraInfo(self):
-    """Encode extra_info into a json string.
+    def EncodeExtraInfo(self):
+        """Encode extra_info into a json string.
 
-    Returns:
-      A json string containing shortname and failed_packages.
-    """
-    extra_info_dict = {
-        'shortname': self.shortname,
-        'failed_packages': list(self.failed_packages)
-    }
-    return json.dumps(extra_info_dict)
+        Returns:
+            A json string containing shortname and failed_packages.
+        """
+        extra_info_dict = {
+            "shortname": self.shortname,
+            "failed_packages": list(self.failed_packages),
+        }
+        return json.dumps(extra_info_dict)
 
-  def BuildCompileFailureOutputJson(self):
-    """Build proto BuildCompileFailureOutput compatible JSON output.
+    def BuildCompileFailureOutputJson(self):
+        """Build proto BuildCompileFailureOutput compatible JSON output.
 
-    Returns:
-      A json string with BuildCompileFailureOutput proto as json.
-    """
-    failures = []
-    for pkg in self.failed_packages:
-      failures.append({'rule': 'emerge', 'output_targets': pkg})
-    wrapper = {'failures': failures}
-    return json.dumps(wrapper, indent=2)
+        Returns:
+            A json string with BuildCompileFailureOutput proto as json.
+        """
+        failures = []
+        for pkg in self.failed_packages:
+            failures.append({"rule": "emerge", "output_targets": pkg})
+        wrapper = {"failures": failures}
+        return json.dumps(wrapper, indent=2)
+
 
 class InfrastructureFailure(CompoundFailure):
-  """Raised if a stage fails due to infrastructure issues."""
+    """Raised if a stage fails due to infrastructure issues."""
 
-  EXCEPTION_CATEGORY = constants.EXCEPTION_CATEGORY_INFRA
+    EXCEPTION_CATEGORY = constants.EXCEPTION_CATEGORY_INFRA
 
 
 # Chrome OS Test Lab failures.
 class TestLabFailure(InfrastructureFailure):
-  """Raised if a stage fails due to hardware lab infrastructure issues."""
+    """Raised if a stage fails due to hardware lab infrastructure issues."""
 
-  EXCEPTION_CATEGORY = constants.EXCEPTION_CATEGORY_LAB
+    EXCEPTION_CATEGORY = constants.EXCEPTION_CATEGORY_LAB
 
 
 class SuiteTimedOut(TestLabFailure):
-  """Raised if a test suite timed out with no test failures."""
+    """Raised if a test suite timed out with no test failures."""
 
 
 class BoardNotAvailable(TestLabFailure):
-  """Raised if the board is not available in the lab."""
+    """Raised if the board is not available in the lab."""
 
 
 class SwarmingProxyFailure(TestLabFailure):
-  """Raised when error related to swarming proxy occurs."""
+    """Raised when error related to swarming proxy occurs."""
 
 
 # Gerrit-on-Borg failures.
 class GoBFailure(InfrastructureFailure):
-  """Raised if a stage fails due to Gerrit-on-Borg (GoB) issues."""
+    """Raised if a stage fails due to Gerrit-on-Borg (GoB) issues."""
 
 
 class GoBQueryFailure(GoBFailure):
-  """Raised if a stage fails due to Gerrit-on-Borg (GoB) query errors."""
+    """Raised if a stage fails due to Gerrit-on-Borg (GoB) query errors."""
 
 
 class GoBSubmitFailure(GoBFailure):
-  """Raised if a stage fails due to Gerrit-on-Borg (GoB) submission errors."""
+    """Raised if a stage fails due to Gerrit-on-Borg (GoB) submission errors."""
 
 
 class GoBFetchFailure(GoBFailure):
-  """Raised if a stage fails due to Gerrit-on-Borg (GoB) fetch errors."""
+    """Raised if a stage fails due to Gerrit-on-Borg (GoB) fetch errors."""
 
 
 # Google Storage failures.
 class GSFailure(InfrastructureFailure):
-  """Raised if a stage fails due to Google Storage (GS) issues."""
+    """Raised if a stage fails due to Google Storage (GS) issues."""
 
 
 class GSUploadFailure(GSFailure):
-  """Raised if a stage fails due to Google Storage (GS) upload issues."""
+    """Raised if a stage fails due to Google Storage (GS) upload issues."""
 
 
 class GSDownloadFailure(GSFailure):
-  """Raised if a stage fails due to Google Storage (GS) download issues."""
+    """Raised if a stage fails due to Google Storage (GS) download issues."""
 
 
 # Builder failures.
 class BuilderFailure(InfrastructureFailure):
-  """Raised if a stage fails due to builder issues."""
+    """Raised if a stage fails due to builder issues."""
 
 
 class MasterSlaveVersionMismatchFailure(BuilderFailure):
-  """Raised if a slave build has a different full_version than its master."""
+    """Raised if a slave build has a different full_version than its master."""
+
 
 # Crash collection service failures.
 class CrashCollectionFailure(InfrastructureFailure):
-  """Raised if a stage fails due to crash collection services."""
+    """Raised if a stage fails due to crash collection services."""
 
 
 class TestFailure(StepFailure):
-  """Raised if a test stage (e.g. VMTest) fails."""
+    """Raised if a test stage (e.g. VMTest) fails."""
 
-  EXCEPTION_CATEGORY = constants.EXCEPTION_CATEGORY_TEST
+    EXCEPTION_CATEGORY = constants.EXCEPTION_CATEGORY_TEST
 
 
 class TestWarning(StepFailure):
-  """Raised if a test stage (e.g. VMTest) returns a warning code."""
+    """Raised if a test stage (e.g. VMTest) returns a warning code."""
 
 
-def GetStageFailureMessageFromException(stage_name, build_stage_id,
-                                        exception, stage_prefix_name=None):
-  """Get StageFailureMessage from an exception.
+def GetStageFailureMessageFromException(
+    stage_name, build_stage_id, exception, stage_prefix_name=None
+):
+    """Get StageFailureMessage from an exception.
 
-  Args:
-    stage_name: The name (string) of the failed stage.
-    build_stage_id: The id of the failed build stage.
-    exception: The BaseException instance to convert to StageFailureMessage.
-    stage_prefix_name: The prefix name (string) of the failed stage,
-        default to None.
+    Args:
+        stage_name: The name (string) of the failed stage.
+        build_stage_id: The id of the failed build stage.
+        exception: The BaseException instance to convert to StageFailureMessage.
+        stage_prefix_name: The prefix name (string) of the failed stage,
+            default to None.
 
-  Returns:
-    An instance of failure_message_lib.StageFailureMessage.
-  """
-  if isinstance(exception, StepFailure):
-    return exception.ConvertToStageFailureMessage(
-        build_stage_id, stage_name, stage_prefix_name=stage_prefix_name)
-  else:
-    stage_failure = failure_message_lib.StageFailure(
-        None, build_stage_id, None, type(exception).__name__, str(exception),
-        GetExceptionCategory(type(exception)), None, None, stage_name,
-        None, None, None, None, None, None, None, None, None, None)
+    Returns:
+        An instance of failure_message_lib.StageFailureMessage.
+    """
+    if isinstance(exception, StepFailure):
+        return exception.ConvertToStageFailureMessage(
+            build_stage_id, stage_name, stage_prefix_name=stage_prefix_name
+        )
+    else:
+        stage_failure = failure_message_lib.StageFailure(
+            None,
+            build_stage_id,
+            None,
+            type(exception).__name__,
+            str(exception),
+            GetExceptionCategory(type(exception)),
+            None,
+            None,
+            stage_name,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
 
-    return failure_message_lib.StageFailureMessage(
-        stage_failure, stage_prefix_name=stage_prefix_name)
+        return failure_message_lib.StageFailureMessage(
+            stage_failure, stage_prefix_name=stage_prefix_name
+        )
 
 
 def GetExceptionCategory(exception_class):
-  # Do not use try/catch. If a subclass of StepFailure does not have a valid
-  # EXCEPTION_CATEGORY, it is a programming error, not a runtime error.
-  if issubclass(exception_class, StepFailure):
-    return exception_class.EXCEPTION_CATEGORY
-  else:
-    return constants.EXCEPTION_CATEGORY_UNKNOWN
+    # Do not use try/catch. If a subclass of StepFailure does not have a valid
+    # EXCEPTION_CATEGORY, it is a programming error, not a runtime error.
+    if issubclass(exception_class, StepFailure):
+        return exception_class.EXCEPTION_CATEGORY
+    else:
+        return constants.EXCEPTION_CATEGORY_UNKNOWN

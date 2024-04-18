@@ -1,14 +1,20 @@
 {
-    "dryrun": true,
-    "gs_image_dir": "gs://chromeos-image-archive/atlas-release/R89-13604.0.0",
-    "sysroot": {
-        "build_target": {
-            "name": "atlas"
-        }
-    },
-    "profile": {
-        "name": "baz"
-    },
-    "sign_types_description": ["IMAGE_TYPE_BASE", "IMAGE_TYPE_RECOVERY"],
-    "sign_types": [1, 6]
+  "dryrun": true,
+  "gs_image_dir": "gs://chromeos-image-archive/atlas-release/R89-13604.0.0",
+  "profile": {
+    "name": "baz"
+  },
+  "sign_types": [
+    1,
+    6
+  ],
+  "sign_types_description": [
+    "IMAGE_TYPE_BASE",
+    "IMAGE_TYPE_RECOVERY"
+  ],
+  "sysroot": {
+    "build_target": {
+      "name": "atlas"
+    }
+  }
 }

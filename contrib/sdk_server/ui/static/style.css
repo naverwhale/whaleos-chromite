@@ -1,0 +1,61 @@
+body{
+	background: #737373;
+}
+
+.classic-link{
+	color: #63a7ff;
+}
+
+.rotate-log-button{
+	transform : rotate(90deg);
+}
+
+.log-box{
+	max-height:300px;
+}
+
+.log-text{
+	white-space:pre-line;
+}
+
+#topBar{
+	background: #F2F2F2;
+}
+
+#chromeLogo{
+	max-height: 50px;
+	max-width:  50px;
+}
+
+#hostnameBar{
+	background: #2B2B2B;
+}
+
+#chrootPath{
+	word-wrap: break-word;
+}
+
+.modal-body p2{
+	word-wrap: break-word;
+}
+
+#repoFilesList{
+	overflow-y: auto; 
+	height: 400px
+}
+
+@keyframes pulse{
+	0%{
+		color: white;
+	}
+	50%{
+		color: gray;
+	}
+	100%{
+		color: white;
+	}
+}
+
+.log-running{
+	animation: pulse 3s infinite;
+}

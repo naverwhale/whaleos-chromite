@@ -1,6 +1,6 @@
 -- The summary field contains an overall human readable summary of the build.
--- The master builders summarize failures from all their slaves.
--- slaves summarize only their own failure.
+-- The main builders summarize failures from all their nodes.
+-- nodes summarize only their own failure.
 ALTER TABLE buildTable
   ADD COLUMN summary varchar(1024) DEFAULT NULL;
 

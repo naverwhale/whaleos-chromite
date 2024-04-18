@@ -1,6 +1,7 @@
 <div class="product">
 <a name="{{license_name}}" class="title">{{license_type}} License {{license_name}}</a>
-<a class="show" href="#" onclick="return toggle(this);">show license text</a>
+<input type="checkbox" hidden id="{{license_name}}">
+<label class="show" for="{{license_name}}"></label>
 <div class="licence">
 <pre>
 {{license}}

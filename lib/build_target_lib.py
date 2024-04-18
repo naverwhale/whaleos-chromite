@@ -1,117 +1,137 @@
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Build target class and related functionality."""
 
 import os
+from pathlib import Path
 import re
-from typing import Optional
+from typing import Iterator, Optional
 
-from chromite.api.gen.chromiumos import common_pb2
+from chromite.lib import constants
+from chromite.lib import portage_util
 
 
 class Error(Exception):
-  """Base module error class."""
+    """Base module error class."""
 
 
-class InvalidNameError(Error):
-  """Error for invalid target name argument."""
+class BuildTarget:
+    """Class to handle the build target information."""
 
+    def __init__(
+        self,
+        name: Optional[str],
+        profile: Optional[str] = None,
+        build_root: Optional[str] = None,
+        public: bool = False,
+    ):
+        """Build Target init.
 
-class BuildTarget(object):
-  """Class to handle the build target information."""
+        Args:
+            name: The full name of the target.
+            profile: The profile name.
+            build_root: The path to the buildroot.
+            public: If true, simulate a public checkout.
+        """
+        self._name = name or None
+        self.profile = profile
+        self.public = public
 
-  def __init__(self,
-               name: str,
-               profile: Optional[str] = None,
-               build_root: Optional[str] = None):
-    """Build Target init.
+        if build_root:
+            self.root = os.path.normpath(build_root)
+        else:
+            self.root = get_default_sysroot_path(self.name)
 
-    Args:
-      name: The full name of the target.
-      profile: The profile name.
-      build_root: The path to the buildroot.
-    """
-    if not name:
-      raise InvalidNameError('Name is required.')
+    def __eq__(self, other):
+        if self.__class__ is other.__class__:
+            return (
+                self.name == other.name
+                and self.profile == other.profile
+                and self.root == other.root
+                and self.public == other.public
+            )
 
-    self._name = name
-    self.board, _, self.variant = name.partition('_')
-    self.profile = profile
+        return NotImplemented
 
-    if build_root:
-      self.root = os.path.normpath(build_root)
-    else:
-      self.root = get_default_sysroot_path(self.name)
+    def __hash__(self):
+        return hash(self.name)
 
-  def __eq__(self, other):
-    if self.__class__ is other.__class__:
-      return (self.name == other.name and self.profile == other.profile and
-              self.root == other.root)
+    def __str__(self):
+        return self.name
 
-    return NotImplemented
+    @property
+    def name(self):
+        return self._name
 
-  def __hash__(self):
-    return hash(self.name)
+    def full_path(self, *args):
+        """Turn a sysroot-relative path into an absolute path."""
+        return os.path.join(self.root, *[part.lstrip(os.sep) for part in args])
 
-  def __str__(self):
-    return self.name
+    def get_command(self, base_command: str) -> str:
+        """Get the build target's variant of the given base command.
 
-  @property
-  def name(self):
-    return self._name
+        We create wrappers for many scripts that handle the build target's
+        arguments. Build the target-specific variant for such a command.
+        e.g. emerge -> emerge-eve.
 
-  @property
-  def as_protobuf(self):
-    return common_pb2.BuildTarget(name=self.name)
+        TODO: Add optional validation the command exists.
 
-  @classmethod
-  def from_protobuf(cls, message):
-    return cls(name=message.name)
+        Args:
+            base_command: The wrapped command.
 
-  @property
-  def profile_protobuf(self):
-    return common_pb2.Profile(name=self.profile)
+        Returns:
+            The build target's command wrapper.
+        """
+        if self.is_host():
+            return base_command
 
-  def full_path(self, *args):
-    """Turn a sysroot-relative path into an absolute path."""
-    return os.path.join(self.root, *[part.lstrip(os.sep) for part in args])
+        return "%s-%s" % (base_command, self.name)
 
-  def get_command(self, base_command: str) -> str:
-    """Get the build target's variant of the given base command.
+    def find_overlays(
+        self, source_root: Path = constants.SOURCE_ROOT
+    ) -> Iterator[Path]:
+        """Find the overlays for this build target.
 
-    We create wrappers for many scripts that handle the build target's
-    arguments. Build the target-specific variant for such a command.
-    e.g. emerge -> emerge-eve.
+        Args:
+            source_root: If provided, use an alternative SOURCE_ROOT (useful for
+                testing).
 
-    TODO: Add optional validation the command exists.
+        Yields:
+            Paths to the overlays.
+        """
+        overlay_type = (
+            constants.PUBLIC_OVERLAYS
+            if self.public
+            else constants.BOTH_OVERLAYS
+        )
+        for overlay in portage_util.FindOverlays(
+            overlay_type, self.name, buildroot=source_root
+        ):
+            yield Path(overlay)
 
-    Args:
-      base_command: The wrapped command.
-
-    Returns:
-      The build target's command wrapper.
-    """
-    return '%s-%s' % (base_command, self.name)
+    def is_host(self) -> bool:
+        """Check if the build target refers to the host."""
+        return not self.name
 
 
 def get_default_sysroot_path(build_target_name=None):
-  """Get the default sysroot location or '/' if |build_target_name| is None."""
-  if build_target_name is None:
-    return '/'
-  return os.path.join('/build', build_target_name)
+    """Get the default sysroot location or / if |build_target_name| is None."""
+    if build_target_name is None:
+        return "/"
+    return os.path.join("/build", build_target_name)
 
 
 def get_sdk_sysroot_path() -> str:
-  """Get the SDK's sysroot path.
+    """Get the SDK's sysroot path.
 
-  Convenience/clarification wrapper for get_default_sysroot_path for use when
-  explicitly fetching the SDK's sysroot path.
-  """
-  return get_default_sysroot_path()
+    Convenience/clarification wrapper for get_default_sysroot_path for use when
+    explicitly fetching the SDK's sysroot path.
+    """
+    return get_default_sysroot_path()
 
 
 def is_valid_name(build_target_name):
-  """Validate |build_target_name| is a valid name."""
-  return bool(re.match(r'^[a-zA-Z0-9-_]+$', build_target_name))
+    """Validate |build_target_name| is a valid name."""
+    return bool(re.match(r"^[a-zA-Z0-9-_]+$", build_target_name))

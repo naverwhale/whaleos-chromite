@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <title>SDK Server</title>
+
+    <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Chromium_Logo.svg/512px-Chromium_Logo.svg.png"/>
+
+    <script
+      src="https://code.jquery.com/jquery-3.7.0.min.js"
+      integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g="
+      crossorigin="anonymous">
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" ></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.min.js" integrity="sha384-Atwg2Pkwv9vp0ygtn1JAojH0nYbwNJLPhwyoVbhoPwBhjQPR5VtM2+xf0Uwh9KtT" crossorigin="anonymous"></script>
+    <link href="//cdnjs.cloudflare.com/ajax/libs/select2/4.0.0/css/select2.min.css" rel="stylesheet" />
+    <script src="//cdnjs.cloudflare.com/ajax/libs/select2/4.0.0/js/select2.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="{{url_for('static', filename='main.js')}}"></script>
+    <link rel = "stylesheet" type = "text/css" href = "{{url_for('static', filename = 'style.css')}}"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src = "https://cdnjs.cloudflare.com/ajax/libs/jstimezonedetect/1.0.7/jstz.min.js"></script>
+
+    <meta id="all_packages" data-packages="{{ data['all_packages']}}">
+  </head>
+
+  <body>
+    <div class = "container-fluid">
+      
+      <!--Top bar-->
+      <div class = "row row-cols-auto align-items-center" id = "topBar">
+          <div class = "col">
+            <img class = "pb-1" id = "chromeLogo" 
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Chromium_Logo.svg/512px-Chromium_Logo.svg.png">
+          </div>
+          <div class = "col">
+            <h2 class="display-6">
+              <strong>SDK Server</strong>
+            </h2>
+          </div>
+          
+      </div>
+      
+      <!--user@hostname and toolbar-->
+      <div class="row align-items-center" id = "hostnameBar">
+        <div class="col" >
+          <p2 class ="text-light fs-5">{{data["user"]}}@{{data["hostname"]}}</p2>
+        </div>
+
+        <div class="col text-light d-flex justify-content-end">
+          <a data-bs-toggle="modal" data-bs-target="#replaceChrootModal" href="#" class="text-light fs-6 link-underline link-underline-opacity-0 me-3">
+            Replace<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="ms-1 mb-1 bi bi-recycle" viewBox="0 0 16 16">
+            <path d="M9.302 1.256a1.5 1.5 0 0 0-2.604 0l-1.704 2.98a.5.5 0 0 0 .869.497l1.703-2.981a.5.5 0 0 1 .868 0l2.54 4.444-1.256-.337a.5.5 0 1 0-.26.966l2.415.647a.5.5 0 0 0 .613-.353l.647-2.415a.5.5 0 1 0-.966-.259l-.333 1.242-2.532-4.431zM2.973 7.773l-1.255.337a.5.5 0 1 1-.26-.966l2.416-.647a.5.5 0 0 1 .612.353l.647 2.415a.5.5 0 0 1-.966.259l-.333-1.242-2.545 4.454a.5.5 0 0 0 .434.748H5a.5.5 0 0 1 0 1H1.723A1.5 1.5 0 0 1 .421 12.24l2.552-4.467zm10.89 1.463a.5.5 0 1 0-.868.496l1.716 3.004a.5.5 0 0 1-.434.748h-5.57l.647-.646a.5.5 0 1 0-.708-.707l-1.5 1.5a.498.498 0 0 0 0 .707l1.5 1.5a.5.5 0 1 0 .708-.707l-.647-.647h5.57a1.5 1.5 0 0 0 1.302-2.244l-1.716-3.004z"/>
+          </svg></a>
+          <a data-bs-toggle="modal" data-bs-target="#updateChrootModal" href="#" class="text-light fs-6 link-underline link-underline-opacity-0 me-3">
+            Update<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="ms-1 mb-1 bi bi-clock" viewBox="0 0 16 16">
+              <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+              <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+            </svg></a>
+          <a data-bs-toggle="modal" data-bs-target="#deleteChrootModal" href="#" class="text-light fs-6 link-underline link-underline-opacity-0 me-3">
+            Delete<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="ms-1 mb-1 bi bi-trash3-fill" viewBox="0 0 16 16">
+              <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528ZM8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5Z"/>
+            </svg></a>
+          <a data-bs-toggle="modal" data-bs-target="#customModal" href="#" class="text-light fs-6 link-underline link-underline-opacity-0">
+            Custom<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil ms-1 mb-1" viewBox="0 0 16 16">
+              <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+            </svg></a>
+        </div>
+        <div class="modal fade" id="createChrootModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false"
+            aria-labelledby="createChrootModal" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content bg-dark">
+              <div class="modal-header">
+                <h1 class="modal-title fs-4 text-light">Create Chroot</h1>
+                
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                
+              </div>
+              <div class="modal-body">
+                <p class="text-white-50">It looks like you don't have a chroot. Create one here before using this application.</p>
+                <ul class = "list-unstyled">
+                  
+                  <li>
+                    <p2 class="text-light fs-6">bootstrap</p2>
+                    <div class="form-check mt-1">
+                      <input class="form-check-input" type="checkbox" value="" id="createBootstrap" checked>
+                      <label class="form-check-label text-light ms-3" for="createBootstrap">
+                       When creating the new chroot, do a full build of the SDK, otherwise use prebuilts.
+                      </label>
+                    </div>
+                  </li>
+
+                  <li class="mt-3">
+                    <p2 class="text-light fs-6">no_use_image</p2>
+                    <div class="form-check mt-1">
+                      <input class="form-check-input" type="checkbox" value="" id="createNoUseImage" checked>
+                      <label class="form-check-label text-light ms-3" for="createNoUseImage">
+                       Create the chroot directly in a directory. If false, mount it on a loopback image.
+                      </label>
+                    </div>
+                  </li>
+
+                  <li class = "mt-3">
+                    <p2 class="text-light fs-6">sdk_version</p2>
+                    <div class="input-group">
+                      <input type="text" class="form-control" placeholder="Version" aria-label="replace SDK Version" id="createSDKVersion">
+                      
+                    </div>
+                    <div class="form-text text-light ms-1" id="basic-addon4">(Optional) The SDK version to use.</div>
+
+                  </li>
+                  
+                </ul>
+                
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id = "createSubmit">Create</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!--Replace, Update, Delete modals-->
+        <div class="modal fade" id="replaceChrootModal" tabindex="-1"
+            aria-labelledby="replaceChrootModal" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content bg-dark">
+              <div class="modal-header">
+                <h1 class="modal-title fs-4 text-light">Replace Chroot</h1>
+                
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                
+              </div>
+              <div class="modal-body">
+                <p class="text-white-50">Deletes the current chroot and creates a new one.</p>
+                <ul class = "list-unstyled">
+                  
+                  <li>
+                    <p2 class="text-light fs-6">bootstrap</p2>
+                    <div class="form-check mt-1">
+                      <input class="form-check-input" type="checkbox" value="" id="replaceBootstrap" checked>
+                      <label class="form-check-label text-light ms-3" for="replaceBootstrap">
+                       When creating the new chroot, do a full build of the SDK, otherwise use prebuilts.
+                      </label>
+                    </div>
+                  </li>
+
+                  <li class="mt-3">
+                    <p2 class="text-light fs-6">no_use_image</p2>
+                    <div class="form-check mt-1">
+                      <input class="form-check-input" type="checkbox" value="" id="replaceNoUseImage" checked>
+                      <label class="form-check-label text-light ms-3" for="replaceNoUseImage">
+                       Create the chroot directly in a directory. If false, mount it on a loopback image.
+                      </label>
+                    </div>
+                  </li>
+
+                  <li class = "mt-3">
+                    <p2 class="text-light fs-6">sdk_version</p2>
+                    <div class="input-group">
+                      <input type="text" class="form-control" placeholder="Version" aria-label="replace SDK Version" id="replaceSDKVersion">
+                      
+                    </div>
+                    <div class="form-text text-light ms-1" id="basic-addon4">(Optional) The SDK version to use.</div>
+
+                  </li>
+                  
+                </ul>
+                
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id = "replaceSubmit">Replace</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal fade" id="deleteChrootModal" tabindex="-1"
+            aria-labelledby="deleteChrootModal" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content bg-dark">
+              <div class="modal-header">
+                <h1 class="modal-title fs-4 text-light">Delete Chroot</h1>
+                
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                
+              </div>
+              <div class="modal-body">
+                <p class="text-white-50">Are you sure you want to delete this chroot?</p>
+                <ul class = "list-unstyled">
+                  
+                  <li>
+                    <input type="checkbox" class="btn-check" name="options-outlined" id="confirmDelete" autocomplete="off">
+                    <label class="btn btn-outline-danger" for="confirmDelete">Confirm Delete</label>
+                  </li>
+                </ul>
+                
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="deleteSubmit" disabled>Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal fade" id="updateChrootModal" tabindex="-1"
+            aria-labelledby="updateChrootModal" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content bg-dark">
+              <div class="modal-header">
+                <h1 class="modal-title fs-4 text-light">Update Chroot</h1>
+                
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                
+              </div>
+              <div class="modal-body">
+                <!--p class="text-white-50">Runs cros_workon start on selected board and package.</p-->
+                <ul class = "list-unstyled">
+                  
+                  <li>
+                    <p2 class="text-light fs-6">build_source</p2>
+                    <div class="form-check mt-1">
+                      <input class="form-check-input" type="checkbox" value="" id="buildSourceCheck" >
+                      <label class="form-check-label text-light ms-3" for="buildSourceCheck">
+                       Build from source, otherwise use binary packages to bootstrap.
+                      </label>
+                    </div>
+                  </li>
+                  <li class = "mt-3">
+                    <p2 class="text-light fs-6">toolchain_changed</p2>
+                    <div class="form-check mt-1">
+                      <input class="form-check-input" type="checkbox" value="" id="toolchainChangedCheck" checked>
+                      <label class="form-check-label text-light ms-3" for="toolchainChangedCheck">
+                        Whether a toolchain change has occurred.
+                      </label>
+                    </div>
+                  </li>
+                  <li class = "mt-3">
+                    <p2 class="text-light fs-6"><strong>toolchain_targets</strong></p2>
+                    <div class="d-flex justify-content-between align-items-center">
+                      <select id="updateToolchainTargets" class="update-select" multiple>
+                        {% for board in data["all_boards"] %}
+                          <option>{{board}}</option>
+                        {% endfor %}
+                      </select>          
+                    </div>
+                    <label class="text-light ms-1" for="buildBuildTarget">
+                      The targets whose toolchains should be updated in the chroot.
+                    </label>
+                  </li>
+                  
+                </ul>
+                
+                
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id = "updateChrootSubmit">Update</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal fade" id="customModal" tabindex="-1"
+            aria-labelledby="customEndpointModal" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content bg-dark">
+              <div class="modal-header">
+                <h1 class="modal-title fs-4 text-light">Custom Build API Endpoint</h1>
+                
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                
+              </div>
+              <div class="modal-body">
+                <!--p class="text-white-50">Runs cros_workon start on selected board and package.</p-->
+                <ul class = "list-unstyled">
+                  
+                  <li class = "">
+                    <p2 class="text-light fs-6"><strong>Endpoint</strong></p2>
+                    <div class="d-flex justify-content-between align-items-center">
+                      <select id="customEndpoint" class="custom-select">
+                        {% for endpoint in data["all_endpoints"] %}
+                          <option>{{endpoint}}</option>
+                        {% endfor %}
+                      </select>          
+                    </div>
+                    <label class="text-light mt-1 ms-1" for="buildBuildTarget">
+                      The build API endpoint to run.
+                    </label>
+                  </li>
+                  <li class = "mt-3">
+                    <p2 class="text-light fs-6"><strong>Request Proto</strong></p2>
+                    <textarea class="form-control" placeholder="" id="customRequest" style="height: 300px"></textarea>
+                    <label class = "text-light mt-1" for="customRequest">The request proto for the endpoint. Will be serialized to a JSON file
+                      and used as input for the selected endpoint. The command will fail and logs will display the issue
+                      if there was something wrong with the input.
+                    </label>
+                  </li>
+                  
+                </ul>
+                
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id = "customSubmit">Run</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!--Middle section: Chroot info and workon packages-->
+      <div class="row">
+        
+        <div class = "col-3">
+            <p class = "text-light"><strong>Chroot Info</strong></p>
+          <ul class = "list-unstyled">
+            <li class="text-white-50 small mb-3 d-flex justify-content-between align-items-center">
+              Created
+              <span class="small badge bg-primary rounded-pill" id = "chrootCreated">
+                
+              </span>
+            </li>
+            <li class="text-white-50 small mb-3 d-flex justify-content-between align-items-center">
+              Last Updated
+              <span class="small badge bg-primary rounded-pill" id = "chrootLastUpdated">
+                
+              </span>
+            </li>
+            <li class="small mb-2 d-flex  justify-content-between align-items-start">
+                <div class="col-3">
+                  <p class="text-white-50">Path</p>
+                </div>
+                <div class="col justify-content-end">
+                  <p id = "chrootPath" align = "right" class="text-light text-break" id = "chrootPath"></p>
+                </div>
+            </li>
+            <li class="text-white-50 small mb-3 d-flex justify-content-between align-items-end">
+              <p>Version</p>
+              <p class="text-light" id = "chrootVersion"></p>
+            </li>
+          </ul>
+
+          <!--cros workon packages/sysroots panel-->
+         
+          
+        </div>
+         <div class="col">
+            
+            <div class = "row bg-light d-flex justify-content-start">
+              <button type="button" class="btn btn-light w-25 rounded-0" id="showPackages"><strong>Packages</strong></button>
+              <button type="button" class="btn btn-light w-25 rounded-0" id="showImages"><strong>Images</strong></button>
+            </div>
+            <!--Board selector row and dropdown-->
+            <div id = "packagesPanel">
+              <div class="row bg-dark justify-content-start align-items-center ">
+                <div class="col-1">
+                  <p2 class="small text-light mr-5"><strong>Board</strong></p2>
+                </div>
+                <div class="col-3">
+                  <div class="dropdown">
+                    <button class="btn btn-dark btn-sm dropdown-toggle pt-0 pb-0 border-secondary board-selector-title" type="button" 
+                    data-bs-toggle="dropdown" aria-expanded="false">Loading...</button>
+                    <ul class="dropdown-menu" id="boardSelector">
+                      {% for board in data["current_boards"] %}
+                        <li>
+                          {% if loop.index == 1 %}
+                            <a class="small dropdown-item board-list-item active" href="#">{{board}}</a>
+                          {% else %}
+                            <a class="small dropdown-item board-list-item" href="#">{{board}}</a>
+                          {% endif %}
+                        </li>
+                      {% endfor %}
+                    </ul>
+                                        
+                  </div>
+                </div>
+
+                <div class = "col-2">
+                  <a data-bs-toggle="modal" data-bs-target="#addPackagesModal" href="#" class = "classic-link">Add package</a>
+                </div>
+
+                <div class="modal fade" id="addPackagesModal" tabindex="-1"
+                    aria-labelledby="addPackagesModal" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <div class="modal-content bg-dark">
+                      <div class="modal-header">
+                        <h1 class="modal-title fs-4 text-light">Add Package</h1>
+                        
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        
+                      </div>
+                      <div class="modal-body">
+                        <p class="text-white-50">Runs cros_workon start on selected board and package.</p>
+                        <ul class = "list-unstyled">
+                          <li class = "d-flex justify-content-between align-items-center mb-4">
+                            <p2 class="text-light fs-6">Board</p2>
+                            <select id="addPackageBoardSelect" class="add-package-select">
+                              {% for board in data["current_boards"] %}
+                                <option>{{board}}</option>
+                              {% endfor %}
+                            </select>
+                          </li>
+                          <li class = "d-flex justify-content-between align-items-center">
+                            <p2 class="text-light fs-6">Package</p2>
+                            <select id="addPackagePackageSelect" class="add-package-select">
+                              <!-- {% for package in data["all_packages"] %}
+                                <option>{{package}}</option>
+                              {% endfor %} -->
+                            </select>
+                          </li>
+                          
+                        </ul>
+                        
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="addPackageSubmit">Add</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class = "col">
+                  <a data-bs-toggle="modal" data-bs-target="#buildPackagesModal" href="#" class = "classic-link">Build packages</a>
+                </div>
+
+                <div class="modal fade" id="buildPackagesModal" tabindex="-1"
+                    aria-labelledby="buildPackagesModal" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-scrollable">
+                    <div class="modal-content bg-dark">
+                      <div class="modal-header">
+                        <h1 class="modal-title fs-4 text-light">Build Packages</h1>
+                        
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        
+                      </div>
+                      <div class="modal-body">
+                        <p class="text-white-50">Builds <strong>all</strong> working packages into selected sysroot. To 
+                        build an individual package, use the build button next to the package name.</p>
+                        <ul class = "list-unstyled">
+                          <li class = "mb-3">
+                            <p2 class="text-light fs-6"><strong>chroot_current</strong></p2>
+                            <div class="form-check mt-1">
+                              <input class="form-check-input" type="checkbox" value="" id="buildChrootCurrent">
+                              <label class="form-check-label text-light ms-3" for="buildChrootCurrent">
+                                Triggers an update of the chroot unless it is declared current.
+                              </label>
+                            </div>
+                          </li>
+
+                          <li class = "mb-3">
+                            <p2 class="text-light fs-6"><strong>replace</strong></p2>
+                            <div class="form-check mt-1">
+                              <input class="form-check-input" type="checkbox" value="" id="buildReplace">
+                              <label class="form-check-label text-light ms-3" for="buildReplace">
+                                Replace the existing sysroot when one already exists. Has no effect 
+                                when the sysroot does not exist.
+                              </label>
+                            </div>
+                          </li>
+                          <li class = "mb-3"> 
+                            <p2 class="text-light fs-6"><strong>toolchain_changed</strong></p2>
+                            <div class="form-check mt-1">
+                              <input class="form-check-input" type="checkbox" value="" id="buildToolchainChanged">
+                              <label class="form-check-label text-light ms-3" for="buildToolchainChanged">
+                                Whether a toolchain change has occurred.
+                              </label>
+                            </div>
+                          </li>
+                          <li class = "mb-3">
+                            <p2 class="text-light fs-6"><strong>use_cq_prebuilts</strong></p2>
+                            <div class="form-check mt-1">
+                              <input class="form-check-input" type="checkbox" value="" id="buildCQPrebuilts">
+                              <label class="form-check-label text-light ms-3" for="buildCQPrebuilts">
+                                Whether to use the prebuilts generated by CQ.
+                              </label>
+                            </div>
+                          </li>
+                          <li class = "mb-3">
+                            <p2 class="text-light fs-6"><strong>build_target</strong></p2>
+                            <div class="d-flex justify-content-between align-items-center">
+
+                              <select id="buildBuildTarget" class="build-packages-select">
+                                {% for board in data["all_boards"] %}
+                                  <option>{{board}}</option>
+                                {% endfor %}
+                              </select>
+                              
+                            </div>
+                            <label class="text-light ms-1" for="buildBuildTarget">
+                              The target to create a sysroot for.
+                            </label>
+                          </li>
+                          <li class = "mb-3">
+                            <p2 class="text-light fs-6"><strong>compile_source</strong></p2>
+                            <div class="form-check mt-1">
+                              <input class="form-check-input" type="checkbox" value="" id="buildCompileSource">
+                              <label class="form-check-label text-light ms-3" for="buildCompileSource">
+                                Compile from source, or use bin packages.
+                              </label>
+                            </div>
+                          </li>
+                          <li class = "mb-3">
+                            <p2 class="text-light fs-6"><strong>dryrun</strong></p2>
+                            <div class="form-check mt-1">
+                              <input class="form-check-input" type="checkbox" value="" id="buildDryrun">
+                              <label class="form-check-label text-light ms-3" for="buildDryrun">
+                                Calculate the packages that would be installed, but don't actually merge them.
+                              </label>
+                            </div>
+                          </li>
+                          <li class = "mb-3">
+                            <p2 class="text-light fs-6"><strong>workon</strong></p2>
+                            <div class="form-check mt-1">
+                              <input class="form-check-input" type="checkbox" value="" id="buildWorkon">
+                              <label class="form-check-label text-light ms-3" for="buildWorkon">
+                                Allow cros workon packages to build from the unstable ebuild.
+                              </label>
+                            </div>
+                          </li>
+                        </ul>
+                        
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="buildPackagesSubmit">Build</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class = "col"></div>
+                
+              </div>
+              <div class="row bg-dark border-top">
+                <div class="col-7"><p2 class = "small text-light m-3"><strong>Name</strong></p2></div>
+                <div class="col-2"><p2 class = "small text-light"><strong></strong></p2></div>
+                <div class="col"><p2 class = "small text-light"><strong>Actions</strong></p2></div>
+              </div>
+            
+              <div class="row" id="allBoardPackages">
+                <li class="row bg-dark border-top border-black p-0 m-0 align-items-center placeholder-glow ">
+                  <div class="ms-1 col-4 placeholder bg-light "></div>
+                  <div class="col-1 placeholder bg-light offset-md-3 d-flex">
+                  </div>
+                  <div class="col offset-md-1">
+                    <button type="button" class="small btn btn-success btn-sm pt-0 pb-0 mt-1 mb-1 disabled placeholder"  >Build</button>
+                    <button type="button" class="small btn btn-secondary btn-sm pt-0 pb-0 disabled placeholder" >Info </button>
+                    <button type="button" class="small btn btn-danger btn-sm pt-0 pb-0 workon-stop disabled placeholder">Stop</button>
+                  </div>              
+                </li>
+                <li class="row bg-dark border-top border-black p-0 m-0 align-items-center placeholder-glow ">
+                  <div class="ms-1 col-6 placeholder bg-light "></div>
+                  <div class="col-1 placeholder bg-light offset-md-1 d-flex">
+                  </div>
+                  <div class="col offset-md-1">
+                    <button type="button" class="small btn btn-success btn-sm pt-0 pb-0 mt-1 mb-1 disabled placeholder" >Build</button>
+                    <button type="button" class="small btn btn-secondary btn-sm pt-0 pb-0 disabled placeholder" >Info</button>
+                    <button type="button" class="small btn btn-danger btn-sm pt-0 pb-0 workon-stop disabled placeholder">Stop</button>
+                  </div>              
+                </li>
+                <li class="row bg-dark border-top border-black p-0 m-0 align-items-center placeholder-glow ">
+                  <div class="ms-1 col-5 placeholder bg-light "></div>
+                  <div class="col-1 placeholder bg-light offset-md-2 d-flex">
+                  </div>
+                  <div class="col offset-md-1">
+                    <button type="button" class="small btn btn-success btn-sm pt-0 pb-0 mt-1 mb-1 disabled placeholder" >Build</button>
+                    <button type="button" class="small btn btn-secondary btn-sm pt-0 pb-0 disabled placeholder" >Info</button>
+                    <button type="button" class="small btn btn-danger btn-sm pt-0 pb-0 workon-stop disabled placeholder">Stop</button>
+                  </div>              
+                </li>
+                
+              </div>
+            </div>
+            <div id="imagesPanel">
+              <div class="row bg-dark justify-content-start align-items-center ">
+                <div class="col-1">
+                  <p2 class="small text-light mr-5"><strong>Board</strong></p2>
+                </div>
+                <div class="col-3">
+                  <div class="dropdown">
+                    <button class="btn btn-dark btn-sm dropdown-toggle pt-0 pb-0 border-secondary board-selector-title" type="button" 
+                    data-bs-toggle="dropdown" aria-expanded="false">Loading...</button>
+                    <ul class="dropdown-menu" id="boardSelector">
+                      {% for board in data["current_boards"] %}
+                        <li>
+                          {% if loop.index == 1 %}
+                            <a class="small dropdown-item board-list-item active" href="#">{{board}}</a>
+                          {% else %}
+                            <a class="small dropdown-item board-list-item" href="#">{{board}}</a>
+                          {% endif %}
+                        </li>
+                      {% endfor %}
+                    </ul>
+                                        
+                  </div>
+                </div>
+                <div class = "col-2">
+                  <a data-bs-toggle="modal" data-bs-target="#buildImageModal" href="#" class = "classic-link">Build Image</a>
+                </div>
+
+                <div class="modal fade" id="buildImageModal" tabindex="-1"
+                    aria-labelledby="buildImageModal" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <div class="modal-content bg-dark">
+                      <div class="modal-header">
+                        <h1 class="modal-title fs-4 text-light">Build Image</h1>
+                        
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        
+                      </div>
+                      <div class = "modal-body">
+                        <ul class = "list-unstyled">
+                  
+                          <li class = "mb-3">
+                            <p2 class="text-light fs-6"><strong>build_target</strong></p2>
+                            <div class="d-flex justify-content-between align-items-center">
+  
+                              <select id="buildImageBuildTarget" class="build-image-select">
+                                {% for board in data["all_boards"] %}
+                                  <option>{{board}}</option>
+                                {% endfor %}
+                              </select>
+                              
+                            </div>
+                            <label class="text-light ms-1" for="buildImageBuildTarget">
+                              The build target whose image is being built.
+                            </label>
+                          </li>
+                          <li class = "mb-3">
+                            <p2 class="text-light fs-6"><strong>image_types</strong></p2>
+                            <div class="d-flex justify-content-between align-items-center">
+  
+                              <select id="buildImageImageTypes" class="build-image-select" multiple>
+                                <option>IMAGE_TYPE_BASE</option>
+                                <option>IMAGE_TYPE_DEV</option>
+                                <option>IMAGE_TYPE_TEST</option>
+                                <option>IMAGE_TYPE_BASE_VM</option>
+                                <option>IMAGE_TYPE_TEST_VM</option>
+                                <option>IMAGE_TYPE_RECOVERY</option>
+                                <option>IMAGE_TYPE_FACTORY</option>
+                                <option>IMAGE_TYPE_FIRMWARE</option>
+                                <option>IMAGE_TYPE_CR50_FIRMWARE</option>
+                                <option>IMAGE_TYPE_BASE_GUEST_VM </option>
+                                <option>IMAGE_TYPE_TEST_GUEST_VM </option>
+                                <option>IMAGE_TYPE_DLC </option>
+                                <option>IMAGE_TYPE_GSC_FIRMWARE </option>
+                                <option>IMAGE_TYPE_ACCESSORY_USBPD </option>
+                                <option>IMAGE_TYPE_ACCESSORY_RWSIG </option>
+                                <option>IMAGE_TYPE_HPS_FIRMWARE </option>
+                                <option>IMAGE_TYPE_NETBOOT </option>
+                                
+                              </select>
+                              
+                            </div>
+                            <label class="text-light ms-1" for="buildImageImageTypes">
+                              The types of images to build, defaults to building base image.
+                            </label>
+                          </li>
+                          <li class = "mt-3">
+                            <p2 class="text-light fs-6">disable_rootfs_verification</p2>
+                            <div class="form-check mt-1">
+                              <input class="form-check-input" type="checkbox" value="" id="rootfsVerification">
+                              <label class="form-check-label text-light ms-3" for="rootfsVerification">
+                                Whether rootfs verification should be disabled.
+                              </label>
+                            </div>
+                          </li>
+                          <li class = "mt-3">
+                            <p2 class="text-light fs-6">version</p2>
+                            <div class="input-group">
+                              <input type="text" class="form-control" placeholder="Version" aria-label="image version" id="imageVersion">
+                              
+                            </div>
+                            <div class="form-text text-light ms-1" id="basic-addon4">The image version.</div>
+        
+                          </li>
+                          <li class = "mt-3">
+                            <p2 class="text-light fs-6">disk_layout</p2>
+                            <div class="input-group">
+                              <input type="text" class="form-control" placeholder="" aria-label="disk layout" id="diskLayout">
+                              
+                            </div>
+                            <div class="form-text text-light ms-1" id="basic-addon4">Disk layout option. See README.disk_layout and legacy_disk_layout.json in
+                              src/scripts/build_library.</div>
+        
+                          </li>
+                          <li class = "mt-3">
+                            <p2 class="text-light fs-6">builder_path</p2>
+                            <div class="input-group">
+                              <input type="text" class="form-control" placeholder="" aria-label="Builder Path" id="builderPath">
+                              
+                            </div>
+                            <div class="form-text text-light ms-1" id="basic-addon4">Used to set the LSB builder path key in /etc/lsb-release. See
+                              chromite/scripts/cros_set_lsb_release.py.</div>
+        
+                          </li>
+                          <li class = "mt-3">
+                            <p2 class="text-light fs-6">base_is_recovery</p2>
+                            <div class="form-check mt-1">
+                              <input class="form-check-input" type="checkbox" value="" id="baseIsRecovery">
+                              <label class="form-check-label text-light ms-3" for="baseIsRecovery">
+                                Whether to use the base image as the recovery image.
+                              </label>
+                            </div>
+                          </li>
+                          
+                        </ul>
+                      </div>
+                      
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="buildImageSubmit">Build</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class = "col"></div>
+              </div>
+              <div class="row bg-dark border-top">
+                <div class="col-8"><p2 class = "small text-light m-3"><strong>Path</strong></p2></div>
+                <div class="col-2"><p2 class = "small text-light"><strong>Type</strong></p2></div>
+                <div class="col"><p2 class = "small text-light"><strong></strong></p2></div>
+              </div>
+              <div class = "row" id = "allBoardImages">
+                <li class="row bg-dark border-top border-black p-0 m-0 align-items-center placeholder-glow ">
+                  <div class="ms-1 col-7 placeholder bg-light my-2 "></div>
+                  <div class="col-2 placeholder bg-light offset-md-1 d-flex">
+                  </div>          
+                </li>
+                <li class="row bg-dark border-top border-black p-0 m-0 align-items-center placeholder-glow ">
+                  <div class="ms-1 col-4 placeholder bg-light my-2 "></div>
+                  <div class="col-2 placeholder bg-light offset-md-4 d-flex">
+                  </div>          
+                </li>
+                <li class="row bg-dark border-top border-black p-0 m-0 align-items-center placeholder-glow ">
+                  <div class="ms-1 col-5 placeholder bg-light my-2 "></div>
+                  <div class="col-2 placeholder bg-light offset-md-3 d-flex">
+                  </div>          
+                </li>
+              </div>
+            </div>
+          </div>
+        </div>
+         <!--Logs section-->
+      <div class = "row bg-dark d-flex justify-content-start">
+        <button type="button" class="btn btn-dark w-25 rounded-0" id="showLogs"><strong>Logs</strong></button>
+        <button type="button" class="btn btn-dark w-25 rounded-0" id ="showRepo"><strong>Version Control</strong></button>
+      </div>
+      <div id = "logsPanel">
+        <div class = "row bg-black">
+          <div class="col-6"><p2 class = "small text-light ms-2 btn-border-radius-sm"><strong>Command</strong></p2></div>
+          <div class="col-2"><p2 class = "small text-light"><strong>Status</strong></p2></div>
+          <div class="col-2"><p2 class = "small text-light"><strong>Log</strong></p2></div>
+          <div class="col"><p2 class = "small text-light ms-2"><strong>Date</strong></p2></div>
+        </div>
+        <div class = "row mb-0 pb-0">
+          <ul class = " list-unstyled" id = "logsList">
+          </ul>
+          
+        </div>
+        <div class = "row my-0">
+          <div class = "col"></div>
+          <div class = "col-2 justify-content-end">
+            <button type="button" class = "btn btn-dark mb-2 mt-2 float-end align-items-center" id = "clearLogs">Clear Logs
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="20" fill="currentColor" class="ms-1 mb-1 bi bi-trash3-fill" viewBox="0 0 16 16">
+              <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528ZM8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5Z"/>
+            </svg></button>
+
+            </button>
+          </div>
+        </div>
+      </div> 
+      <div id = "repoPanel">
+        <div class = "row">
+          <div class = "col-8" >
+            <div class = "row bg-black">
+              <div class="col-6"><p2 class = "small text-light ms-2"><strong>File</strong></p2></div>
+              <div align = "center" class="col"><p2 class = "small text-light" data-bs-toggle="tooltip" data-bs-placement="right"
+                data-bs-title="The difference between the file in the staging area and the latest commit.">
+                <strong>Last Commit</strong></p2>
+              </div>
+              <div align = "center" class="col"><p2 class = "small text-light" data-bs-toggle="tooltip" data-bs-placement="right"
+                data-bs-title="The difference between the file in the working directory and the staging area.">
+                <strong>Working Directory</strong></p2>
+              </div>
+            </div>
+            
+            <ul id = "repoFilesList" class = "row list-unstyled mb-0 bg-dark p-0 d-flex flex-column">
+              <div class = "placeholder-glow justify-content-center row mb-2" style="height:15px">
+                <div class = "placeholder bg-light col-md-6"></div>
+                <div class = "placeholder bg-light col-md-2 offset-md-1"></div>
+                <div class = "placeholder bg-light col-md-1 offset-md-1"></div>
+                <div class = "col"></div>
+              </div>
+              <div class = "placeholder-glow justify-content-center row mb-2" style="height:15px">
+                <div class = "placeholder bg-light col-md-4"></div>
+                <div class = "placeholder bg-light col-md-1 offset-md-3"></div>
+                <div class = "placeholder bg-light col-md-2 offset-md-2"></div>
+              </div>
+              <div class = "placeholder-glow justify-content-center row mb-2" style="height:15px">
+                <div class = "placeholder bg-light col-md-5"></div>
+                <div class = "placeholder bg-light col-md-1 offset-md-2"></div>
+                <div class = "placeholder bg-light col-md-1 offset-md-2"></div>
+                <div class = "col"></div>
+              </div>
+              <div class = "placeholder-glow justify-content-center row mb-2" style="height:15px">
+                <div class = "placeholder bg-light col-md-6"></div>
+                <div class = "placeholder bg-light col-md-2 offset-md-1"></div>
+                <div class = "placeholder bg-light col-md-2 offset-md-1"></div>
+              </div>
+              <div class = "placeholder-glow justify-content-center row mb-2" style="height:15px">
+                <div class = "placeholder bg-light col-md-5"></div>
+                <div class = "placeholder bg-light col-md-2 offset-md-2"></div>
+                <div class = "placeholder bg-light col-md-1 offset-md-1"></div>
+                <div class = "col"></div>
+              </div>
+              <div class = "flex-grow-1">
+              </div>
+            </ul>
+          </div>
+          <div class = "col bg-dark border-start border-top border-light-subtle">
+            <h6 class = "text-light bg-black row py-1"><strong>Repo Info</strong></h6>
+            <div class = "row d-flex justify-content-between placeholder-glow">
+              <div class = "col text-white-50 fs-6" >Project</div>
+              <div class = "col text-light fs-6 placeholder bg-light me-3" id = "repoProject">
+              </div>
+            </div>
+            <div class = "row mt-2 placeholder-glow">
+              <div class = "col text-white-50 fs-6">Branch</div>
+              <div class = "col text-light fs-6 placeholder bg-light me-3" id = "repoBranch">
+
+              </div>
+            </div>
+            <div class = "d-flex justify-content-start position-relative">
+              <div>
+                <button type = "button" class = "btn btn-secondary mt-5
+                 position-relative bottom-0 start-0" id="repoStatusRefresh">
+                  Refresh<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise ms-1" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                    <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                  </svg>
+                </button>
+              </div>
+              <div>
+                <button type = "button" class = "btn btn-secondary ms-3 mt-5" id="repoSync">
+                  Sync<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-repeat ms-1" viewBox="0 0 16 16">
+                    <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/>
+                    <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>          
+          </div>
+        </div>
+        
+      </div>
+      
+    </div>
+  </body>
+</html>

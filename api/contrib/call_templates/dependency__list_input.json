@@ -1,0 +1,17 @@
+{
+  "include_rev_deps": true,
+  "src_paths": [
+    {
+      "path": "src/third_party/chromiumos-overlay/chromeos-base/chromeos-chrome/chromeos-chrome-9999.ebuild"
+    },
+    {
+      "path": "src/third_party/linux-firmware/ti_3410.fw"
+    }
+  ],
+  "sysroot": {
+    "buildTarget": {
+      "name": "%(build_target)s"
+    },
+    "path": "/build/%(build_target)s"
+  }
+}

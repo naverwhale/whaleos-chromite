@@ -1,0 +1,97 @@
+# Copyright 2023 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_files", "strip_prefix")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+
+# Chromite has some recursive symlinks which we need to exclude
+
+package_group(
+    name = "all_packages",
+    packages = [
+        "//...",
+    ],
+)
+
+pkg_files(
+    name = "__files__",
+    srcs = glob(
+        [
+            #"api/**",
+            "bin/**",
+            #"cidb/**",
+            "cli/**",
+            "config/**",
+            # "conftest.py",
+            #"contrib/**",
+            #"cbuildbot/**",
+            "cbuildbot/cbuildbot_alerts.py",
+            "cros/**",
+            # "docs/**",
+            # ".env",
+            #"format/**",
+            #"infra/**",
+            "__init__.py",
+            "lib/**",
+            "licensing/**",
+            "lint/**",
+            # "pytest.ini",
+            # "run_tests",
+            "scripts/**",
+            "PRESUBMIT.cfg",
+            #"sdk/**",
+            #"service/**",
+            #"signing/**",
+            #"ssh_keys/**",
+            #"test/**",
+            "third_party/**",
+            "utils/**",
+        ],
+        exclude = [
+            # Contains utf-8 characters
+            "third_party/swarming.client/example/**",
+            # Changes frequently in non-reproducible ways
+            "**/__pycache__/**",
+            # saklein@ says this shouldn't be used during builds
+            "infra/proto/**",
+            # Exclude git repos
+            "**/.git",
+            "**/.git/**",
+            # Unit test changes don't need to be in the tarball
+            "**/*_unittest.py",
+        ],
+    ),
+    attributes = pkg_attributes(
+        mode = "0755",
+    ),
+    prefix = "/mnt/host/source/chromite",
+    strip_prefix = strip_prefix.from_pkg(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_tar(
+    name = "src",
+    srcs = [
+        ":__files__",
+    ],
+    compressor = "@//bazel/portage/repo_defs/zstd",
+    compressor_args = "--threads=0",
+    extension = "tar.zst",
+    visibility = ["@//bazel:internal"],
+)
+
+# The following targets should ideally be defined elsewhere.
+# However, if we added third_party/BUILD.bazel, for example, then the glob
+# above would exclude them.
+py_library(
+    name = "elftools",
+    srcs = glob(["third_party/pyelftools/elftools/**/*.py"]),
+)
+
+py_binary(
+    name = "lddtree",
+    srcs = ["third_party/lddtree.py"],
+    visibility = ["//visibility:public"],
+    deps = [":elftools"],
+)

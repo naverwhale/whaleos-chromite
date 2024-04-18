@@ -1,0 +1,15 @@
+# copybot downstreaming configuration files
+
+# downstream argparser
+per-file downstream_argparser.py = jpmurphy@google.com
+per-file downstream_argparser.py = aaronmassey@google.com
+per-file downstream_argparser.py = honscheid@google.com
+
+# coreboot
+per-file coreboot_downstream.py = jpmurphy@google.com
+per-file coreboot_downstream.py = pfagerburg@chromium.org
+
+# zephyr
+per-file zephyr_downstream.py = aaronmassey@google.com
+per-file zephyr_downstream.py = honscheid@google.com
+per-file zephyr_downstream.py = jpmurphy@google.com
